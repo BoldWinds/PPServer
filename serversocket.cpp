@@ -14,7 +14,7 @@ ServerSocket::ServerSocket(QObject *parent) : QTcpSocket(parent){
     connect(this,&ServerSocket::readyRead,this,[this](){
         QByteArray message;
         message = readAll();
-        emit signal_read(socketDescriptor(),message);
+        emit signal_readyRead(socketDescriptor(),message);
     });
 
     connect(this,&ServerSocket::disconnected ,this,[this](){

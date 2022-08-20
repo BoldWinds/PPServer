@@ -28,7 +28,7 @@ signals:
     void signal_disconnected_userID(QString userID);
 
     //收到信息的信号
-    void signal_read(qintptr descriptor,QByteArray message);
+    void signal_readyRead(qintptr descriptor,QByteArray message);
 
 };
 
