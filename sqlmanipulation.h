@@ -25,19 +25,28 @@ public:
     bool login_account(QString userID,QString password);
     //获取用户好友和群聊列表
     QByteArray get_chatlist(QString userID);
+    //获取好友列表
+    QList<QString> get_friendlist(QString userID);
+    //获取群聊列表
+    QList<QString> get_grouplist(QString userID);
     //给userID1添加userID2的好友
     bool add_friend(QString userID1,QString userID2);
     //创建以userID为创建者的群聊
     QString create_group(QString userID,QString groupName);
     //按照groupID获取同一群组所有成员
     QList<QString> get_groupMember(QString groupID);
-    //将userID加入到groupID群组中，返回群组名
-    bool add_group(QString useID,QString groupID);
+    //将userID加入到groupID群组中
+    bool add_group(QString userID,QString groupID);
     //通过userID获取对应nickname
     QString get_nickname(QString userID);
     //通过groupID获取对应groupName
     QString get_groupName(QString groupID);
-
+    //通过groupID获取对应creatorID
+    QString get_creatorID(QString groupID);
+    //输出表中内容
+    void output_table(QString table,int column);
+    //删除表
+    void delete_table(QString table);
 
 private:
     static sqlManipulation* new_instance;
