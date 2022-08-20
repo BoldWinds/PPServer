@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui sql
+QT       += core gui sql network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,9 +25,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    sqlmanipulation.cpp
+    sqlmanipulation.cpp\
+    serversocket.cpp \
+    serversocketthread.cpp
 
 HEADERS  += mainwindow.h \
-    sqlmanipulation.h
+    sqlmanipulation.h \
+    serversocket.h \
+    serversocketthread.h
+
 
 FORMS    += mainwindow.ui
