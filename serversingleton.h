@@ -13,72 +13,86 @@
 class ServerSingleton : public QTcpServer
 {
 public:
-    ServerSingleton();
-    /*
-     * @brief get_instance 获取服务单例对象的指针
+    explicit ServerSingleton(QObject *parent = nullptr);
+    //获取服务单例对象的指针
+    static ServerSingleton* getInstance();
 
-    static ServerSingleton* get_instance();
-    *
-     * @brief get_network_info 获取本地网络消息
+    //获取本地网络消息
+    void getNetworkInfo();
 
-    void get_network_info();
-
-    //再本地以默认端口开启服务
+    //在本地以默认端口开启服务
     void openServer();
 
-    *
-     * @brief open_server 以gui上的ip和端口号开启服务
-     * @param ip
-     * @param port
+    //以提供的IP和端口开启服务
+    void openServer(QString ip, QString port);
 
-    void open_server(QString ip, QString port);
+    //关闭服务
+    void closeServer();
 
-     * @brief close_server 关闭当前服务
+    //根据给定的descriptor，关闭对应连接的套接字
+    void closeSocket(qintptr descriptor);
 
-    void close_server();
-    /**
-     * @brief close_socket 根据给定的socketDescriptor，关闭对应连接的套接字
-     * @param des 描述符
-
-    void close_socket(qintptr des);
-    /**
-     * @brief close_socket 根据给定的QtId，关闭对应连接的套接字
-     * @param qtid
-
-    void close_socket(QtId qtid);
+    // 根据给定的userID，关闭对应连接的套接字
+    void closeSocket(QString userID);
 
 protected:
-    /**
-     * @brief incomingConnection override 有新的连接进入服务器时调用，自动为其分配描述符
-     * @param des 描述符
 
-    void incomingConnection(qintptr description);
-    /**
-     * @brief timerEvent 定时器，检测心跳信号
-     * @param e timer
+     // 有新的连接进入服务器时调用，自动为其分配描述符
+    void newConnection(qintptr descriptor);
 
+    // timerEvent 定时器，检测心跳信号
 //    virtual void timerEvent(QTimerEvent* e);
 
 private:
-
-    explicit ServerSingleton(QObject *parent = nullptr);
-
-    QString get_nickname(QString userID);
-
     //Server单例的指针，防止重复创建
     static ServerSingleton* instance;
+    //获取ID对应的nickname
+    QString getNickname(QString userID);
     //Server的ip地址
-    QString server_ip = "127.0.0.1";
-//    QHash<qintptr, ServerSocketThread*> socket_hash;                    // 从描述符到对应封装socket的QThread的hash
-//    QHash<QtId, qintptr> descriptor_hash;                               // 从QtId到对应描述符的hash
-//    QHash<QtId, QString> nickname_hash;                                 // 从QtId到昵称的hash，加快查找速度
+    QString serverIP = "127.0.0.1";
+    //从描述符到对应封装socket的QThread的hash
+    QHash<qintptr, ServerSocketThread*> socketHash;
+    //从userID到对应描述符的hash
+    QHash<QString, qintptr> descriptorHash;
+    //从userID到昵称的hash
+    QHash<QString, QString> nicknameHash;
+    //记录所有在线的用户
+    QSet<QString> onlineSet;
+    // host地址
+    QHostAddress hostaddr;
+    // host信息
+    QHostInfo hostinfo;
 //    QHash<QtId, quint16> heart_hash;                                    // 记录当前用户心跳包状态的hash
 //    QHash<QPair<QtId, QtId> , QList<QString>* > message_cache_hash;     // 从发送者到接收者QtId的QPair到对应离线消息的hash
-    QSet<QString> online_set;                                              // 记录在线客户端的id
-    QHostAddress hostaddr;                                              // host地址
-    QHostInfo hostinfo;                                                 // host信息
 //    int heart_timer;                                                    // 检测心跳包的timer，每10s进行检测
     QMutex mutex;                                                       // 锁
-*/
+signals:
+    //特定userID发送信息信号
+    void signalSendMessage(QString userID, const QByteArray message);
+
+    //特定标识符发送消息信号
+    void sigSendMessage(qintptr descriptor, QByteArray message);
+
+    //获取标识符信号
+    void signalGetIPList(QHostInfo hostInfo);
+
+    //用户上线信号
+    void signalOnline(QString userID);
+
+    //用户下线信号
+    void sigOffline(QString userID);
+
+    //更新gui信号
+    void signalUpdateGui(QString log);
+private slots:
+
+    //接收发送消息信号    向指定userID发送消息
+    void slotSendMessage(QString userID, const QByteArray message);
+
+    //接收发送消息信号    向指定标识符发送信息
+    void slotSendMessage(qintptr descriptor, const QByteArray message);
+
+    // 接受获取ip的信号    获取本机的所有ip
+    void slotGetAddress(QHostInfo hostInfo);
 };
 #endif // SERVERSINGLETON_H
