@@ -9,6 +9,7 @@
 #include <QSqlRecord>
 #include <QSqlDriver>
 #include <QSqlError>
+#include <QDataStream>
 #include <QMutex>
 
 class sqlManipulation : public QObject
@@ -31,16 +32,21 @@ public:
     //按照groupID获取同一群组所有成员
     QList<QString> get_groupMember(QString groupID);
     //将userID加入到groupID群组中，返回群组名
-    QString add_group(QString useID,QString groupID);
-    //通过userI获取对应nickname
+    bool add_group(QString useID,QString groupID);
+    //通过userID获取对应nickname
     QString get_nickname(QString userID);
+    //通过groupID获取对应groupName
+    QString get_groupName(QString groupID);
 
 
 private:
     static sqlManipulation* new_instance;
+    static int account_num;
+    static int group_num;
+    QSqlDatabase myDatabase;
 };
-
-inline sqlManipulation::instantiation(){
+//实例化sqlManipulation类的静态方法
+inline sqlManipulation* sqlManipulation::instantiation(){
     QMutex mutex;
     if(new_instance==nullptr){
         mutex.lock();
