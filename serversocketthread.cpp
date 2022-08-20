@@ -5,7 +5,7 @@ ServerSocketThread::ServerSocketThread(QObject *parent, qintptr descriptor) : QT
 {
     serverSocket = new ServerSocket();
     serverSocket->setSocketDescriptor(descriptor);
-    serverSocket->record_descriptor(descriptor);
+    serverSocket->recordDescriptor(descriptor);
 }
 
 QByteArray ServerSocketThread::read(){
@@ -22,19 +22,19 @@ void ServerSocketThread::write(QByteArray message){
     qDebug()<<"MESSAGE SEND FAILURE";
 }
 
-void ServerSocketThread::record_userID(QString _userID)
+void ServerSocketThread::recordUserID(QString _userID)
 {
     qDebug() << _userID;
     userID = _userID;
     //同时更新线程所绑定socket的userID
-    serverSocket->record_userID(_userID);
+    serverSocket->recordUserID(_userID);
 }
 
-void ServerSocketThread::record_descriptor(qintptr _descriptor)
+void ServerSocketThread::recordDescriptor(qintptr _descriptor)
 {
     descriptor = _descriptor;
     //同时更新线程所绑定socket的descriptor
-    serverSocket->record_descriptor(_descriptor);
+    serverSocket->recordDescriptor(_descriptor);
 }
 
 void ServerSocketThread::close(){
@@ -44,9 +44,10 @@ void ServerSocketThread::close(){
 
 void ServerSocketThread::run(){
 
-    connect(serverSocket, &ServerSocket::signal_disconnected_descriptor, this, &ServerSocketThread::slot_disconnected_descriptor);
-    connect(serverSocket, &ServerSocket::signal_disconnected_userID, this, &ServerSocketThread::slot_disconnected_userID);
-    connect(serverSocket, &ServerSocket::signal_readyRead, this, &ServerSocketThread::slot_readyRead);
+    //处理该线程绑定的socket所发出来的信号
+    connect(serverSocket, &ServerSocket::signalDisconnectedDescriptor, this, &ServerSocketThread::slotDisconnectedDescriptor);
+    connect(serverSocket, &ServerSocket::signalDisconnectedUserID, this, &ServerSocketThread::slotDisconnectedUserID);
+    connect(serverSocket, &ServerSocket::signalReadyRead, this, &ServerSocketThread::slotReadyRead);
 
     if(serverSocket->waitForConnected()){
         qDebug()<<"connected";
@@ -59,19 +60,22 @@ void ServerSocketThread::run(){
     }
 }
 
-void ServerSocketThread::slot_disconnected_userID(QString _userID)
+void ServerSocketThread::slotDisconnectedUserID(QString _userID)
 {
-    emit ServerSocketThread::signal_disconnected_userID(userID);
+    //该信号在singleton被捕获
+    emit ServerSocketThread::signalDisconnectedUserID(_userID);
 }
 
-void ServerSocketThread::slot_disconnected_descriptor(qintptr _descriptor)
+void ServerSocketThread::slotDisconnectedDescriptor(qintptr _descriptor)
 {
-    emit ServerSocketThread::signal_disconnected_descriptor(descriptor);
+    //该信号在singleton被捕获
+    emit ServerSocketThread::signalDisconnectedDescriptor(_descriptor);
 }
 
-void ServerSocketThread::slot_readyRead(qintptr _descriptor, QByteArray message)
+void ServerSocketThread::slotReadyRead(qintptr _descriptor, QByteArray message)
 {
-    emit ServerSocketThread::signal_readyRead(_descriptor, message);
+    //该信号在singleton被捕获
+    emit ServerSocketThread::signalReadyRead(_descriptor, message);
 }
 
 QAbstractSocket::SocketState ServerSocketThread::state(){

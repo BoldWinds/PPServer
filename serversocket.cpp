@@ -1,11 +1,11 @@
 #include "serversocket.h"
 
-void ServerSocket::record_descriptor(qintptr _des){
+void ServerSocket::recordDescriptor(qintptr _des){
     descriptor = _des;
     setSocketDescriptor(_des);
 }
 
-void ServerSocket::record_userID(QString _userID){
+void ServerSocket::recordUserID(QString _userID){
     userID = _userID;
 }
 
@@ -14,7 +14,7 @@ ServerSocket::ServerSocket(QObject *parent) : QTcpSocket(parent){
     connect(this,&ServerSocket::readyRead,this,[this](){
         QByteArray message;
         message = readAll();
-        emit signal_readyRead(socketDescriptor(),message);
+        emit signalReadyRead(socketDescriptor(),message);
     });
 
     connect(this,&ServerSocket::disconnected ,this,[this](){
@@ -22,14 +22,14 @@ ServerSocket::ServerSocket(QObject *parent) : QTcpSocket(parent){
             return;
         }
 
-        qDebug()<<userID;
+        qDebug()<<userID<<" has disconnected!";
 
         if(QString::localeAwareCompare(userID, QString("")) == 0){
             qDebug()<<"HAVE NOT SIGNED UP";
-            emit signal_disconnected_descriptor(descriptor);
+            emit signalDisconnectedDescriptor(descriptor);
         }else{
             qDebug()<<"socket";
-            emit signal_disconnected_userID(userID);
+            emit signalDisconnectedUserID(userID);
         }
     });
 }

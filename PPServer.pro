@@ -27,12 +27,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     sqlmanipulation.cpp\
     serversocket.cpp \
-    serversocketthread.cpp
+    serversocketthread.cpp \
+    serversingleton.cpp
 
 HEADERS  += mainwindow.h \
     sqlmanipulation.h \
     serversocket.h \
-    serversocketthread.h
+    serversocketthread.h \
+    serversingleton.h
 
 
 FORMS    += mainwindow.ui

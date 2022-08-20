@@ -23,10 +23,10 @@ public:
     void write(QByteArray message);
 
     //保存userID
-    void record_userID(QString userID);
+    void recordUserID(QString userID);
 
     //保存标识符
-    void record_descriptor(qintptr descriptor);
+    void recordDescriptor(qintptr descriptor);
 
     //关闭连接
     void close();
@@ -50,25 +50,25 @@ private:
 
 private slots:
 
-    //slot_disconnected_qtid 接受socket断开的信号并转发    userID 断开连接的socket连接用户的userID
-    void slot_disconnected_userID(QString userID);
+    //接受socket断开的信号并转发给singleton
+    void slotDisconnectedUserID(QString userID);
 
-    //slot_disconnected_des 接受socket断开的信号并转发  des 断开连接的socket的描述符
-    void slot_disconnected_descriptor(qintptr des);
+    //接受socket断开的信号并转发给singleton
+    void slotDisconnectedDescriptor(qintptr des);
 
-    //slot_readyread 接受socket收到信息的信号并转发des 收到信号的socket的描述符 message 收到的信息
-    void slot_readyRead(qintptr descriptor, QByteArray message);
+    //接受socket收到信息的信号并转发给singleton
+    void slotReadyRead(qintptr descriptor, QByteArray message);
 
 signals:
 
-    //该信号要通知给singleton 发送socket断开连接的信号
-    void signal_disconnected_userID(QString userID);
+    //该信号要通知给singleton socket断开连接的信号
+    void signalDisconnectedUserID(QString userID);
 
-    //该信号要通知给singleton 发送socket断开连接的信号
-    void signal_disconnected_descriptor(qintptr descriptor);
+    //该信号要通知给singleton socket断开连接的信号
+    void signalDisconnectedDescriptor(qintptr descriptor);
 
-    //该信号要通知给singleton
-    void signal_readyRead(qintptr descriptor, QByteArray message);
+    //该信号要通知给singleton 读取信号
+    void signalReadyRead(qintptr descriptor, QByteArray message);
 
 };
 
