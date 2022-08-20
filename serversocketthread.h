@@ -11,20 +11,27 @@ class ServerSocketThread : public QThread
     Q_OBJECT
 
 public:
+
     explicit ServerSocketThread(QObject *parent = nullptr, qintptr descriptor = -1);
+
     ServerSocketThread(qintptr descriptor);
 
     //读socket中的内容
     QByteArray read();
 
+    //发送
     void write(QByteArray message);
 
+    //保存userID
     void record_userID(QString userID);
 
+    //保存标识符
     void record_descriptor(qintptr descriptor);
 
+    //关闭连接
     void close();
 
+    //该线程socket的状态
     QAbstractSocket::SocketState state();
 
 protected:
@@ -32,10 +39,14 @@ protected:
     virtual void run();
 
 private:
-    ServerSocket* serverSocket;      // 封装的自定义socket对象的指针
-    QString userID = QString("");     // 保存的qtid
-    qintptr descriptor = -1;          // 保存的socket描述符
-    bool checkpoint = true;           // 标记循环终止
+    //封装的自定义socket对象的指针
+    ServerSocket* serverSocket;
+    //保存的userID
+    QString userID = QString("");
+    //保存的socket标识符
+    qintptr descriptor = -1;
+    //用于标记循环终止
+    bool checkpoint = true;
 
 private slots:
 
@@ -50,13 +61,13 @@ private slots:
 
 signals:
 
-    //sig_disconnected_qtid 发送socket断开连接的信号 @param qtid 断开连接的socket连接用户的QtId
+    //该信号要通知给singleton 发送socket断开连接的信号
     void signal_disconnected_userID(QString userID);
 
-    // sig_disconnected_des 发送socket断开连接的信号 des 断开连接的socket的描述符
+    //该信号要通知给singleton 发送socket断开连接的信号
     void signal_disconnected_descriptor(qintptr descriptor);
 
-    // sig_readyRead 发送收到信息的信号，以开始读信息 des 收到信号的socket的描述符 message 收到的信息
+    //该信号要通知给singleton
     void signal_readyRead(qintptr descriptor, QByteArray message);
 
 };
