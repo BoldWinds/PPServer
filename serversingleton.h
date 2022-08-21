@@ -51,8 +51,6 @@ private:
     static ServerSingleton* instance;
     //获取ID对应的nickname
     QString getNickname(QString userID);
-    //存储离线消息
-    void offlineMessage(QString userID,QByteArray offlineMsg);
 
     //Server的ip地址
     QString serverIP = "127.0.0.1";
@@ -99,6 +97,9 @@ private slots:
 
     //接收发送消息信号    向指定标识符发送信息
     void slotSendMessage(qintptr descriptor, const QByteArray message);
+
+    //处理用户上线的离线消息
+    void slotUserOnline(QString userID);
 
     //接收ReadyRead信号    进行具体业务逻辑处理
     void slotReadMessage(qintptr descriptor, QByteArray message);

@@ -15,6 +15,9 @@ ServerSingleton::ServerSingleton(QObject *parent) : QTcpServer(parent)
     connect(this, SIGNAL(signalSendMessage(QString, const QByteArray)),
             this, SLOT(slotSendMessage(QString, const QByteArray)));
 
+    connect(this,SIGNAL(signalOnline(QString)),
+                        this,SLOT(slotUserOnline(QString)));
+
     //这段代码？？
     if(!QMetaType::isRegistered((QMetaType::type("qintptr")))){
         qRegisterMetaType<qintptr>("qintptr");
@@ -95,24 +98,6 @@ void ServerSingleton::closeSocket(QString userID){
     closeSocket(descriptorHash[userID]);
 }
 
-
-void ServerSingleton::offlineMessage(QString userID,QByteArray offlineMsg){
-    if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
-        //目前没有该用户的未读消息
-        QList<QByteArray> offlineMsgs = QList<QByteArray>();
-        offlineMsgs.append(offlineMsg);
-        offlinemessageHash.insert(userID,offlineMsgs);
-    }else{
-        //已经有该用户的未读消息
-        if(offlinemessageHash[userID].size()>=100){
-            //缓存的离线消息过多，放弃早的加入新的
-            offlinemessageHash[userID].removeFirst();
-        }
-        offlinemessageHash[userID].append(offlineMsg);
-    }
-
-}
-
 QString ServerSingleton::getNickname(QString userID){
     //若hash里没有则去数据库里查找并加入到hash里
     if(nicknameHash.find(userID) == nicknameHash.end()){
@@ -124,10 +109,27 @@ QString ServerSingleton::getNickname(QString userID){
 
 void ServerSingleton::slotSendMessage(QString userID, const QByteArray message){
     qDebug() << "Sending message: " << message;
-
-    qintptr descriptor = descriptorHash[userID];
-    ServerSocketThread* serverSocketThread = socketHash[descriptor];
-    serverSocketThread->write(message);
+    if(onlineSet.find(userID) == onlineSet.constEnd()){
+        //这哥们不在线
+        qDebug()<<"receiver offline";
+        if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
+            //目前没有该用户的未读消息
+            QList<QByteArray> offlineMsgs = QList<QByteArray>();
+            offlineMsgs.append(message);
+            offlinemessageHash.insert(userID,offlineMsgs);
+        }else{
+            //已经有该用户的未读消息
+            if(offlinemessageHash[userID].size()>=100){
+                //缓存的离线消息过多，放弃旧的加入新的
+                offlinemessageHash[userID].removeFirst();
+            }
+            offlinemessageHash[userID].append(message);
+        }
+    }else{
+        qintptr descriptor = descriptorHash[userID];
+        ServerSocketThread* serverSocketThread = socketHash[descriptor];
+        serverSocketThread->write(message);
+    }
 }
 
 void ServerSingleton::slotSendMessage(qintptr descriptor, const QByteArray message){
@@ -141,6 +143,25 @@ void ServerSingleton::slotGetAddress(QHostInfo hostInfo){
     emit signalGetIPList(hostInfo);
 }
 
+void ServerSingleton::slotUserOnline(QString userID){
+    //先检测有没有离线消息
+    if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
+        //没有离线消息
+        qDebug()<<"no offline message";
+    }else{
+        //有离线消息
+        if(offlinemessageHash[userID].size()>0){
+            for(auto message : offlinemessageHash[userID]){
+                emit signalSendMessage(userID,message);
+            }
+            //删除发送的离线消息
+            offlinemessageHash.remove(userID);
+        }
+    }
+    onlineSet.insert(userID);
+
+
+}
 
 void ServerSingleton::incomingConnection(qintptr descriptor){
 
@@ -185,27 +206,104 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     qDebug() << "Header : " << header;
 
     if(header.startsWith("REGISTER")){
-        QString nickname,password;
-        messageStream >> nickname >> password;
+        QString nickname,password,mail;
+        messageStream >> nickname >> password >> mail;
 
         sqlManipulation *sql = sqlManipulation::instantiation();
-        QString userID = sql->register_account(nickname,password);
+        QString userID = sql->register_account(nickname,password,mail);
 
-        replyStream()<<"REGISTER_SUCCESS"<<userID;
-
+        replyStream<<"REGISTER_SUCCESS"<<userID;
         emit ServerSingleton::signalSendMessage(descriptor,reply);
 
     }else if(header.startsWith("LOGIN")){
+        QString userID,password;
+        messageStream>>userID>>password;
 
+        sqlManipulation *sql = sqlManipulation::instantiation();
+        if(sql->login_account(userID,password)){
+            //登录成功
+            replyStream<<"LOGIN_SUCCESS";
+            emit signalSendMessage(descriptor,reply);
+            qDebug()<<"user: "<<userID<<" login";
+
+            //离线消息发送
+            if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
+                //没有离线消息
+                qDebug()<<"no offline message";
+            }else{
+                //有离线消息
+                if(offlinemessageHash[userID].size()>0){
+                    for(auto message : offlinemessageHash[userID]){
+                        emit signalSendMessage(userID,message);
+                    }
+                    //删除发送的离线消息
+                    offlinemessageHash.remove(userID);
+                }
+            }
+
+            //Hash操作
+            onlineSet.insert(userID);
+            descriptorHash[userID] = descriptor;
+
+        }else{
+            replyStream<<"LOGIN_FAIL";
+            emit signalSendMessage(descriptor,reply);
+            qDebug()<<"user: "<<userID<<" login fail";
+        }
     }else if(header.startsWith("GET_FRIENDS")){
+        QString userID;
+        messageStream >> userID;
 
+        int friendsCount,groupsCount;
+        QList<QString> friendnames,groupnames;
+
+        sqlManipulation* sql = sqlManipulation::instantiation();
+
+        QList<QString> friendIDs = sql->get_friendlist(userID);
+        QList<QString> groupIDs = sql->get_grouplist(userID);
+
+   //     friendnames = sql;
+   //     groupnames = sql;
+
+        replyStream<<"GET_FRIENDS_SUCCESS"<<friendsCount<<friendIDs<<friendnames
+                  <<groupsCount<<groupIDs<<groupnames;
+
+        emit signalSendMessage(descriptor,reply);
     }else if(header.startsWith("ADD_FRIEND")){
+        QString sendUserID,sendUsername,receiverUserID;
+        messageStream >> sendUserID>>sendUsername>>receiverUserID;
+
+        replyStream<<"ADD_FRIEND"<< sendUserID<<sendUsername<<receiverUserID;
+
+        emit signalSendMessage(receiverUserID,reply);
 
     }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
+        QString sendUserID,receiveUserID,receiveUsername;
+        messageStream >> sendUserID >> receiveUserID >>receiveUsername;
+
+        sqlManipulation *sql = sqlManipulation::instantiation();
+        sql->add_friend(sendUserID,receiveUserID);
+
+        replyStream<<"ADD_FRIEND_SUCCESS"<< sendUserID<<receiveUserID<<receiveUsername;
+
+        emit signalSendMessage(sendUserID,reply);
 
     }else if(header.startsWith("ADD_FRIEND_FAIL")){
+        QString sendUserID,receiveUserID;
+        messageStream >> sendUserID >> receiveUserID;
 
+        replyStream<<"ADD_FRIEND_FAIL"<< sendUserID<<receiveUserID;
+
+        emit signalSendMessage(sendUserID,reply);
     }else if(header.startsWith("CREATE_GROUP")){
+        QString userID,groupname,groupID;
+        messageStream>> userID>>groupname;
+
+        sqlManipulation *sql = sqlManipulation::instantiation();
+        groupID = sql->create_group(userID,groupname);
+
+        replyStream << "CREATE_GROUP_SUCCESS" << groupID;
+        emit signalSendMessage(descriptor,reply);
 
     }else if(header.startsWith("PRIVATE_CHAT")){  //私聊
 
