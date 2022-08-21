@@ -209,21 +209,26 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString nickname,password,mail;
         messageStream >> nickname >> password >> mail;
 
-        sqlManipulation *sql = sqlManipulation::instantiation();
-        QString userID = sql->register_account(nickname,password,mail);
+        QString userID = sqlManipulation::instantiation()->register_account(nickname,password,mail);
 
         replyStream<<"REGISTER_SUCCESS"<<userID;
-        emit ServerSingleton::signalSendMessage(descriptor,reply);
+
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit ServerSingleton::signalSendMessage(descriptor,reply);
+        },descriptor,reply);
 
     }else if(header.startsWith("LOGIN")){
         QString userID,password;
         messageStream>>userID>>password;
 
-        sqlManipulation *sql = sqlManipulation::instantiation();
-        if(sql->login_account(userID,password)){
+        if(sqlManipulation::instantiation()->login_account(userID,password)){
             //登录成功
             replyStream<<"LOGIN_SUCCESS";
-            emit signalSendMessage(descriptor,reply);
+
+            QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+                emit signalSendMessage(descriptor,reply);
+            },descriptor,reply);
+
             qDebug()<<"user: "<<userID<<" login";
 
             //离线消息发送
@@ -234,7 +239,9 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
                 //有离线消息
                 if(offlinemessageHash[userID].size()>0){
                     for(auto message : offlinemessageHash[userID]){
-                        emit signalSendMessage(userID,message);
+                        QtConcurrent::run(QThreadPool::globalInstance(),[this](QString userID,QByteArray message){
+                            emit signalSendMessage(userID,message);
+                        },userID,message);
                     }
                     //删除发送的离线消息
                     offlinemessageHash.remove(userID);
@@ -255,38 +262,49 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         messageStream >> userID;
 
         int friendsCount,groupsCount;
-        QList<QString> friendnames,groupnames;
 
         sqlManipulation* sql = sqlManipulation::instantiation();
 
         QList<QString> friendIDs = sql->get_friendlist(userID);
         QList<QString> groupIDs = sql->get_grouplist(userID);
 
-   //     friendnames = sql;
-   //     groupnames = sql;
+        friendsCount = friendIDs.size();
+        groupsCount = groupIDs.count();
+
+        QList<QString> friendnames = QList<QString>();
+        QList<QString> groupnames = QList<QString>();
+
+        for(auto friendID : friendIDs){
+            friendnames.append(sql->get_nickname(friendID));
+        }
+        for(auto groupID : groupnames){
+            groupnames.append(sql->get_groupName(groupID));
+        }
 
         replyStream<<"GET_FRIENDS_SUCCESS"<<friendsCount<<friendIDs<<friendnames
                   <<groupsCount<<groupIDs<<groupnames;
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit signalSendMessage(descriptor,reply);
+        },descriptor,reply);
 
-        emit signalSendMessage(descriptor,reply);
     }else if(header.startsWith("ADD_FRIEND")){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
         replyStream<<"ADD_FRIEND"<< sendUserID<<sendUsername<<receiverUserID;
-
-        emit signalSendMessage(receiverUserID,reply);
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
+            emit signalSendMessage(receiverUserID,reply);
+        },receiverUserID,reply);
 
     }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
         QString sendUserID,receiveUserID,receiveUsername;
         messageStream >> sendUserID >> receiveUserID >>receiveUsername;
 
-        sqlManipulation *sql = sqlManipulation::instantiation();
-        sql->add_friend(sendUserID,receiveUserID);
-
+        sqlManipulation::instantiation()->add_friend(sendUserID,receiveUserID);
         replyStream<<"ADD_FRIEND_SUCCESS"<< sendUserID<<receiveUserID<<receiveUsername;
-
-        emit signalSendMessage(sendUserID,reply);
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
+            emit signalSendMessage(sendUserID,reply);
+        },sendUserID,reply);
 
     }else if(header.startsWith("ADD_FRIEND_FAIL")){
         QString sendUserID,receiveUserID;
@@ -294,16 +312,22 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         replyStream<<"ADD_FRIEND_FAIL"<< sendUserID<<receiveUserID;
 
-        emit signalSendMessage(sendUserID,reply);
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
+            emit signalSendMessage(sendUserID,reply);
+        },sendUserID,reply);
+
+
     }else if(header.startsWith("CREATE_GROUP")){
         QString userID,groupname,groupID;
         messageStream>> userID>>groupname;
 
-        sqlManipulation *sql = sqlManipulation::instantiation();
-        groupID = sql->create_group(userID,groupname);
+        groupID = sqlManipulation::instantiation()->create_group(userID,groupname);
 
         replyStream << "CREATE_GROUP_SUCCESS" << groupID;
-        emit signalSendMessage(descriptor,reply);
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit signalSendMessage(descriptor,reply);
+        },descriptor,reply);
+
 
     }else if(header.startsWith("PRIVATE_CHAT")){  //私聊
 
