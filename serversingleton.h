@@ -12,6 +12,9 @@
 
 class ServerSingleton : public QTcpServer
 {
+
+    Q_OBJECT
+
 public:
     explicit ServerSingleton(QObject *parent = nullptr);
     //获取服务单例对象的指针
@@ -38,7 +41,7 @@ public:
 protected:
 
      // 有新的连接进入服务器时调用，自动为其分配描述符
-    void newConnection(qintptr descriptor);
+    void incomingConnection(qintptr descriptor);
 
     // timerEvent 定时器，检测心跳信号
 //    virtual void timerEvent(QTimerEvent* e);
@@ -91,6 +94,9 @@ private slots:
 
     //接收发送消息信号    向指定标识符发送信息
     void slotSendMessage(qintptr descriptor, const QByteArray message);
+
+    //接收ReadyRead信号    进行具体业务逻辑处理
+    void slotReadMessage(qintptr descriptor, QByteArray message);
 
     // 接受获取ip的信号    获取本机的所有ip
     void slotGetAddress(QHostInfo hostInfo);

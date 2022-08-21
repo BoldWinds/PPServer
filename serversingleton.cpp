@@ -47,6 +47,7 @@ void ServerSingleton::getNetworkInfo(){
 
 void ServerSingleton::openServer(QString ip,QString port){
     if(this->isListening()){
+        qDebug()<<"server has already been listening";
         //emit sig_update_gui("Server is already listening!");
     }else if(this->listen(QHostAddress(ip), port.toUInt())){
         qDebug() << "Server listening...";
@@ -67,7 +68,7 @@ void ServerSingleton::closeServer(){
     this->close();
     //对online表中的每一个用户进行下线处理
     for(auto user:onlineSet){
-        //emit signalOffline(user);
+        emit signalOffline(user);
         onlineSet.remove(user);
         qDebug()<<"user: "<<user<<"offline";
     }
@@ -96,8 +97,10 @@ void ServerSingleton::closeSocket(QString userID){
 
 QString ServerSingleton::getNickname(QString userID){
     //若hash里没有则去数据库里查找并加入到hash里
-
-
+    if(nicknameHash.find(userID) == nicknameHash.end()){
+        sqlManipulation* sql = sqlManipulation::instantiation();
+        nicknameHash.insert(userID,sql->get_nickname(userID));
+    }
     return nicknameHash[userID];
 }
 
@@ -117,15 +120,33 @@ void ServerSingleton::slotSendMessage(qintptr descriptor, const QByteArray messa
 }
 
 void ServerSingleton::slotGetAddress(QHostInfo hostInfo){
-    //emit signalGetIPList(hostInfo);
+    emit signalGetIPList(hostInfo);
 }
 
 
-void ServerSingleton::newConnection(qintptr descriptor){
+void ServerSingleton::incomingConnection(qintptr descriptor){
 
+    qDebug()<<"NEW CONNECTION!";
     ServerSocketThread *serverSocketThread = nullptr;
 
+    //新建socket并分配标识符
+    if(socketHash.find(descriptor) == socketHash.end()){
+        //当前hash里没有该描述符对应的socket
+        serverSocketThread = new ServerSocketThread();
+        serverSocketThread->start();
+        serverSocketThread->recordDescriptor(descriptor);
+        socketHash.insert(descriptor,serverSocketThread);
+    }else{
+        //当前hash里已经有该描述符所对应的socket
+        serverSocketThread = socketHash[descriptor];
+        serverSocketThread->recordDescriptor(descriptor);
+    }
 
+    qDebug()<<"NEW CONNECTION HAS BEEN ESTABLISHED!";
+
+    //具体业务逻辑处理
+    connect(serverSocketThread,SIGNAL(signalReadyRead(qintptr,QByteArray)),
+                this,SLOT(slotReadMessage(qintptr,QByteArray)));
 
 
     //断开连接处理
@@ -135,5 +156,46 @@ void ServerSingleton::newConnection(qintptr descriptor){
     connect(serverSocketThread, &ServerSocketThread::signalDisconnectedUserID, [this](QString userID){
         closeSocket(userID);
     });
+}
+
+void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
+    QDataStream messageStream(&message, QIODevice::ReadOnly);
+    QByteArray header;
+    messageStream >> header;
+    qDebug() << "Header : " << header;
+
+    if(header.startsWith("REGISTER")){
+
+    }else if(header.startsWith("LOGIN")){
+
+    }else if(header.startsWith("GET_FRIENDS")){
+
+    }else if(header.startsWith("ADD_FRIEND")){
+
+    }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
+
+    }else if(header.startsWith("ADD_FRIEND_FAIL")){
+
+    }else if(header.startsWith("CREATE_GROUP")){
+
+    }else if(header.startsWith("PRIVATE_CHAT")){
+
+    }else if(header.startsWith("PUBLIC_CHAT")){
+
+    }else if(header.startsWith("ADD_GROUP")){
+
+    }else if(header.startsWith("ADD_GROUP_SUCCESS")){
+
+    }else if(header.startsWith("ADD_GROUP_FAIL")){
+
+    }else if(header.startsWith("INVITE_GROUP")){
+
+    }else if(header.startsWith("INVITE_GROUP_SUCCESS")){
+
+    }else if(header.startsWith("INVITE_GROUP_FAIL")){
+
+    }else if(header.startsWith("SEND_FILE")){
+
+    }
 }
 
