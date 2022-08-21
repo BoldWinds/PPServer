@@ -51,6 +51,9 @@ private:
     static ServerSingleton* instance;
     //获取ID对应的nickname
     QString getNickname(QString userID);
+    //存储离线消息
+    void offlineMessage(QString userID,QByteArray offlineMsg);
+
     //Server的ip地址
     QString serverIP = "127.0.0.1";
     //从描述符到对应封装socket的QThread的hash
@@ -65,8 +68,10 @@ private:
     QHostAddress hostaddr;
     // host信息
     QHostInfo hostinfo;
+    //从接收者userID到他的离线消息的hash
+    QHash<QString,QList<QByteArray>> offlinemessageHash;
 //    QHash<QtId, quint16> heart_hash;                                    // 记录当前用户心跳包状态的hash
-//    QHash<QPair<QtId, QtId> , QList<QString>* > message_cache_hash;     // 从发送者到接收者QtId的QPair到对应离线消息的hash
+
 //    int heart_timer;                                                    // 检测心跳包的timer，每10s进行检测
     QMutex mutex;                                                       // 锁
 signals:
@@ -74,7 +79,7 @@ signals:
     void signalSendMessage(QString userID, const QByteArray message);
 
     //特定标识符发送消息信号
-    void sigSendMessage(qintptr descriptor, QByteArray message);
+    void signalSendMessage(qintptr descriptor, QByteArray message);
 
     //获取标识符信号
     void signalGetIPList(QHostInfo hostInfo);

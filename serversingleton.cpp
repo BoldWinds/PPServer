@@ -95,6 +95,24 @@ void ServerSingleton::closeSocket(QString userID){
     closeSocket(descriptorHash[userID]);
 }
 
+
+void ServerSingleton::offlineMessage(QString userID,QByteArray offlineMsg){
+    if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
+        //目前没有该用户的未读消息
+        QList<QByteArray> offlineMsgs = QList<QByteArray>();
+        offlineMsgs.append(offlineMsg);
+        offlinemessageHash.insert(userID,offlineMsgs);
+    }else{
+        //已经有该用户的未读消息
+        if(offlinemessageHash[userID].size()>=100){
+            //缓存的离线消息过多，放弃早的加入新的
+            offlinemessageHash[userID].removeFirst();
+        }
+        offlinemessageHash[userID].append(offlineMsg);
+    }
+
+}
+
 QString ServerSingleton::getNickname(QString userID){
     //若hash里没有则去数据库里查找并加入到hash里
     if(nicknameHash.find(userID) == nicknameHash.end()){
@@ -160,11 +178,22 @@ void ServerSingleton::incomingConnection(qintptr descriptor){
 
 void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     QDataStream messageStream(&message, QIODevice::ReadOnly);
+    QByteArray reply;
+    QDataStream replyStream(&reply,QIODevice::WriteOnly);
     QByteArray header;
     messageStream >> header;
     qDebug() << "Header : " << header;
 
     if(header.startsWith("REGISTER")){
+        QString nickname,password;
+        messageStream >> nickname >> password;
+
+        sqlManipulation *sql = sqlManipulation::instantiation();
+        QString userID = sql->register_account(nickname,password);
+
+        replyStream()<<"REGISTER_SUCCESS"<<userID;
+
+        emit ServerSingleton::signalSendMessage(descriptor,reply);
 
     }else if(header.startsWith("LOGIN")){
 
