@@ -20,7 +20,7 @@ public:
     //实例化sqlManipulation类的静态方法
     static sqlManipulation* instantiation();
     //使用nickname和password注册账号
-    QString register_account(QString nickname,QString password);
+    QString register_account(QString nickname,QString password,QString mail);
     //使用userID和password登录账号
     bool login_account(QString userID,QString password);
     //获取用户好友和群聊列表
