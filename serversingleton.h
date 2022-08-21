@@ -80,7 +80,7 @@ signals:
     void signalOnline(QString userID);
 
     //用户下线信号
-    void sigOffline(QString userID);
+    void signalOffline(QString userID);
 
     //更新gui信号
     void signalUpdateGui(QString log);

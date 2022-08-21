@@ -11,6 +11,7 @@ ServerSingleton::ServerSingleton(QObject *parent) : QTcpServer(parent)
 {
     getNetworkInfo();
 
+    //发送消息的connet函数
     connect(this, SIGNAL(signalSendMessage(QString, const QByteArray)),
             this, SLOT(slotSendMessage(QString, const QByteArray)));
 
@@ -37,12 +38,24 @@ ServerSingleton* ServerSingleton::getInstance(){
     return ServerSingleton::instance;
 }
 
+//设置信息
 void ServerSingleton::getNetworkInfo(){
-
+    QHostInfo::lookupHost(hostinfo.localHostName(), this, SLOT(slotGetAddress(QHostInfo)));
+    hostaddr.setAddress(serverIP);
+    qDebug() << hostaddr;
 }
 
 void ServerSingleton::openServer(QString ip,QString port){
-
+    if(this->isListening()){
+        //emit sig_update_gui("Server is already listening!");
+    }else if(this->listen(QHostAddress(ip), port.toUInt())){
+        qDebug() << "Server listening...";
+        qDebug() << "Server ip is" << ip;
+        qDebug() << "Server port is " + port;
+        //emit sig_update_gui("Server starts listening.");
+        //emit sig_update_gui("Server ip  : " + ip);
+        //emit sig_update_gui("Server port: " + port);
+    }
 }
 
 void ServerSingleton::openServer(){
@@ -51,39 +64,76 @@ void ServerSingleton::openServer(){
 }
 
 void ServerSingleton::closeServer(){
-
+    this->close();
+    //对online表中的每一个用户进行下线处理
+    for(auto user:onlineSet){
+        //emit signalOffline(user);
+        onlineSet.remove(user);
+        qDebug()<<"user: "<<user<<"offline";
+    }
+    qDebug()<<"SERVER CLOSED!";
 }
 
 void ServerSingleton::closeSocket(qintptr descriptor){
+    //hash中不含该标识符对应的socket
+    if(socketHash.find(descriptor) == socketHash.end()){
+        qDebug()<<"NO SOCKET "<<descriptor;
+    }else{
+        ServerSocketThread* serverSocketThread = socketHash[descriptor];
+
+        serverSocketThread->close();
+        serverSocketThread->quit();
+        serverSocketThread->deleteLater();
+
+        socketHash.remove(descriptor);
+    }
 
 }
 
 void ServerSingleton::closeSocket(QString userID){
-    closeSocket(descriptorHash.value(userID));
+    closeSocket(descriptorHash[userID]);
 }
 
-void ServerSingleton::newConnection(qintptr descriptor){
+QString ServerSingleton::getNickname(QString userID){
+    //若hash里没有则去数据库里查找并加入到hash里
 
+
+    return nicknameHash[userID];
 }
-
 
 void ServerSingleton::slotSendMessage(QString userID, const QByteArray message){
     qDebug() << "Sending message: " << message;
-//    QtConcurrent::run(QThreadPool::globalInstance(), [this](qintptr des, QByteArray message){
+
     qintptr descriptor = descriptorHash[userID];
     ServerSocketThread* serverSocketThread = socketHash[descriptor];
     serverSocketThread->write(message);
-//    },des, message);
 }
 
 void ServerSingleton::slotSendMessage(qintptr descriptor, const QByteArray message){
        qDebug() << "Sending message: " << message;
+
        ServerSocketThread* serverSocketThread = socketHash[descriptor];
        serverSocketThread->write(message);
 }
 
 void ServerSingleton::slotGetAddress(QHostInfo hostInfo){
-
+    //emit signalGetIPList(hostInfo);
 }
 
+
+void ServerSingleton::newConnection(qintptr descriptor){
+
+    ServerSocketThread *serverSocketThread = nullptr;
+
+
+
+
+    //断开连接处理
+    connect(serverSocketThread, &ServerSocketThread::signalDisconnectedDescriptor, [this](qintptr des){
+        closeSocket(des);
+    });
+    connect(serverSocketThread, &ServerSocketThread::signalDisconnectedUserID, [this](QString userID){
+        closeSocket(userID);
+    });
+}
 
