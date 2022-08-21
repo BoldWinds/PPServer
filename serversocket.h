@@ -11,10 +11,10 @@ public:
     explicit ServerSocket(QObject *parent = nullptr);
 
     //保存标识符
-    void record_descriptor(qintptr descriptor);
+    void recordDescriptor(qintptr descriptor);
 
     //保存userID
-    void record_userID(QString userID);
+    void recordUserID(QString userID);
 
 private:
     //记录的descriptor
@@ -24,13 +24,13 @@ private:
 signals:
 
     //断开连接的信号，准备处理断开连接用户的descriptor
-    void signal_disconnected_descriptor(qintptr descriptor);
+    void signalDisconnectedDescriptor(qintptr descriptor);
 
     //断开连接的信号，准备处理断开连接用户的userID
-    void signal_disconnected_userID(QString userID);
+    void signalDisconnectedUserID(QString userID);
 
     //收到信息的信号
-    void signal_readyRead(qintptr descriptor,QByteArray message);
+    void signalReadyRead(qintptr descriptor,QByteArray message);
 
 };
 
