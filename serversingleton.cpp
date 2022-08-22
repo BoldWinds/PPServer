@@ -89,6 +89,7 @@ void ServerSingleton::closeSocket(qintptr descriptor){
         serverSocketThread->quit();
         serverSocketThread->deleteLater();
 
+        qDebug()<<"socket: "<<descriptor<<" closed";
         socketHash.remove(descriptor);
     }
 
@@ -201,7 +202,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     QDataStream messageStream(&message, QIODevice::ReadOnly);
     QByteArray reply;
     QDataStream replyStream(&reply,QIODevice::WriteOnly);
-    QByteArray header;
+    QString header;
     messageStream >> header;
     qDebug() << "Header : " << header;
 
@@ -211,7 +212,10 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         QString userID = sqlManipulation::instantiation()->register_account(nickname,password,mail);
 
-        replyStream<<"REGISTER_SUCCESS"<<userID;
+        qDebug()<<"user: "<<nickname <<"'s userID is: "<<userID;
+
+        QString header = "REGISTER_SUCCESS";
+        replyStream<<header<<userID;
 
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
@@ -223,7 +227,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         if(sqlManipulation::instantiation()->login_account(userID,password)){
             //登录成功
-            replyStream<<"LOGIN_SUCCESS";
+            QString header = "LOGIN_SUCCESS";
+            replyStream<<header;
 
             QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
                 emit signalSendMessage(descriptor,reply);
@@ -252,8 +257,13 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             onlineSet.insert(userID);
             descriptorHash[userID] = descriptor;
 
+            //给socket记录userID
+            ServerSocketThread *serverSocketThread = socketHash[descriptor];
+            serverSocketThread->recordUserID(userID);
+
         }else{
-            replyStream<<"LOGIN_FAIL";
+            QString header = "LOGIN_FAIL";
+            replyStream<<header;
             emit signalSendMessage(descriptor,reply);
             qDebug()<<"user: "<<userID<<" login fail";
         }
@@ -269,9 +279,11 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         else result=false;
 
         if(result){
-            replyStream << "RETRIEVE_SUCCESS";
+            QString header = "RETRIEVE_SUCCESS";
+            replyStream<<header;
         }else{
-            replyStream << "RETRIEVE_FAIL";
+            QString header = "RETRIEVE_FAIL";
+            replyStream<<header;
         }
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
@@ -284,7 +296,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         NickName=sqlManipulation::instantiation()->get_nickname(userID);
         Mail=sqlManipulation::instantiation()->get_mail(userID);
 
-        replyStream << "GET_USER_INFO_SUCCESS" << NickName << Mail;
+        QString header = "GET_USER_INFO_SUCCESS";
+        replyStream << header << NickName << Mail;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
@@ -313,7 +326,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             groupnames.append(sql->get_groupName(groupID));
         }
 
-        replyStream<<"GET_FRIENDS_SUCCESS"<<friendsCount<<friendIDs<<friendnames
+        QString header = "GET_FRIENDS_SUCCESS";
+        replyStream<<header<<friendsCount<<friendIDs<<friendnames
                   <<groupsCount<<groupIDs<<groupnames;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit signalSendMessage(descriptor,reply);
@@ -330,7 +344,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             sqlManipulation::instantiation()->change_password(userID,NewPassword);
         }
 
-        replyStream << "UPDATE_USERINFO_SUCCESS";
+        QString header = "UPDATE_USERINFO_SUCCESS";
+        replyStream << header;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
@@ -339,7 +354,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
-        replyStream<<"ADD_FRIEND"<< sendUserID<<sendUsername<<receiverUserID;
+        QString header = "ADD_FRIEND";
+        replyStream<<header<< sendUserID<<sendUsername<<receiverUserID;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
             emit signalSendMessage(receiverUserID,reply);
         },receiverUserID,reply);
@@ -349,7 +365,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         messageStream >> sendUserID >> receiveUserID >>receiveUsername;
 
         sqlManipulation::instantiation()->add_friend(sendUserID,receiveUserID);
-        replyStream<<"ADD_FRIEND_SUCCESS"<< sendUserID<<receiveUserID<<receiveUsername;
+        QString header = "ADD_FRIEND_SUCCESS";
+        replyStream<<header<< sendUserID<<receiveUserID<<receiveUsername;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
             emit signalSendMessage(sendUserID,reply);
         },sendUserID,reply);
@@ -358,7 +375,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString sendUserID,receiveUserID;
         messageStream >> sendUserID >> receiveUserID;
 
-        replyStream<<"ADD_FRIEND_FAIL"<< sendUserID<<receiveUserID;
+        QString header = "ADD_FRIEND_FAIL";
+        replyStream<<header<< sendUserID<<receiveUserID;
 
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
             emit signalSendMessage(sendUserID,reply);
@@ -371,7 +389,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         groupID = sqlManipulation::instantiation()->create_group(userID,groupname);
 
-        replyStream << "CREATE_GROUP_SUCCESS" << groupID;
+        QString header = "CREATE_GROUP_SUCCESS";
+        replyStream << header << groupID;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit signalSendMessage(descriptor,reply);
         },descriptor,reply);
