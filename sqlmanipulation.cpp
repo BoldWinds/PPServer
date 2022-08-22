@@ -243,6 +243,81 @@ bool sqlManipulation::add_group(QString userID,QString groupID){
     return result;
 }
 
+//查询密码是否正确
+bool sqlManipulation::check_password(QString userID,QString password){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString check_password=QString("SELECT * FROM User WHERE userID='%1' AND password='%2'").arg(userID).arg(password);
+    bool result=false;
+    if(query->prepare(check_password) && query->exec()){
+        if(query->next()){
+            result=true;
+            qDebug()<<"User("<<userID<< ")'s password is correct";
+        }
+    }
+    if(result==false){
+        qDebug()<<"Fail to find user("<<userID<< ")'s password is wrong";
+    }
+    delete query;
+    return result;
+}
+
+//查询密保邮箱是否正确
+bool sqlManipulation::check_mail(QString userID,QString mail){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString check_mail=QString("SELECT * FROM User WHERE userID='%1' AND mail='%2'").arg(userID).arg(mail);
+    bool result=false;
+    if(query->prepare(check_mail) && query->exec()){
+        if(query->next()){
+            result=true;
+            qDebug()<<"User("<<userID<< ")'s mail is correct";
+        }
+    }
+    if(result==false){
+        qDebug()<<"Fail to find user("<<userID<< ")'s mail is wrong";
+    }
+    delete query;
+    return result;
+}
+
+//修改用户密码
+bool sqlManipulation::change_password(QString userID,QString newPassword){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString update_password=QString("UPDATE User SET password='%1' WHERE userID='%2'").arg(newPassword).arg(userID);
+    bool result=query->prepare(update_password) && query->exec();
+    if(result){
+        qDebug()<<"Successfully retrieve";
+    }
+    else qDebug()<<"Fail to retrieve";
+    delete query;
+    return result;
+}
+
+//修改用户邮箱
+bool sqlManipulation::change_mail(QString userID,QString newMail){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString update_mail=QString("UPDATE User SET mail='%1' WHERE userID='%2'").arg(newMail).arg(userID);
+    bool result=query->prepare(update_mail) && query->exec();
+    if(result){
+        qDebug()<<"Successfully change mail";
+    }
+    else qDebug()<<"Fail to change mail";
+    delete query;
+    return result;
+}
+
+//修改用户昵称
+bool sqlManipulation::change_nickname(QString userID,QString newNickname){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString update_nickname=QString("UPDATE User SET nickname='%1' WHERE userID='%2'").arg(newNickname).arg(userID);
+    bool result=query->prepare(update_nickname) && query->exec();
+    if(result){
+        qDebug()<<"Successfully change nickname";
+    }
+    else qDebug()<<"Fail to change nickname";
+    delete query;
+    return result;
+}
+
 //通过userID获取对应nickname
 QString sqlManipulation::get_nickname(QString userID){
     QSqlQuery* query=new QSqlQuery(myDatabase);
@@ -256,6 +331,21 @@ QString sqlManipulation::get_nickname(QString userID){
     else qDebug()<<"Fail to get nickname";
     delete query;
     return nickname;
+}
+
+//通过userID获取对应mail
+QString sqlManipulation::get_mail(QString userID){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString mail;
+    QString userID_mail=QString("SELECT mail FROM User WHERE userID='%1'").arg(userID);
+    if(query->prepare(userID_mail) && query->exec()){
+        query->next();
+        mail=query->value(0).toString();
+        qDebug()<<"Successfully get mail";
+    }
+    else qDebug()<<"Fail to get mail";
+    delete query;
+    return mail;
 }
 
 //通过groupID获取对应groupName

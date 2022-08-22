@@ -260,9 +260,15 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     }else if(header.startsWith("RETRIEVE")){
         QString userID,mail,password;
         messageStream>> userID >> mail >> password;
+        bool result;
+        //检查邮箱是否正确
+        bool mail_result=sqlManipulation::instantiation()->check_mail(userID,mail);
+        if(mail_result){  //更新密码
+            result=sqlManipulation::instantiation()->change_password(userID,password);
+        }
+        else result=false;
 
-        //数据库处理
-        if(1){
+        if(result){
             replyStream << "RETRIEVE_SUCCESS";
         }else{
             replyStream << "RETRIEVE_FAIL";
@@ -275,7 +281,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         messageStream >> userID;
 
         QString NickName,Mail;
-        //数据库操作
+        NickName=sqlManipulation::instantiation()->get_nickname(userID);
+        Mail=sqlManipulation::instantiation()->get_mail(userID);
 
         replyStream << "GET_USER_INFO_SUCCESS" << NickName << Mail;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
@@ -314,9 +321,14 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
     }else if(header.startsWith("UPDATE_USERINFO")){
         QString NickName,Mail,NewPassword,OriginalPassword;
-        messageStream >> NickName,Mail,NewPassword,OriginalPassword;
-
-        //数据库操作
+        messageStream >> NickName>>Mail>>NewPassword>>OriginalPassword;
+        QString userID=descriptorHash.key(descriptor);
+        bool result=sqlManipulation::instantiation()->check_password(userID,OriginalPassword);
+        if(result){
+            sqlManipulation::instantiation()->change_nickname(userID,NickName);
+            sqlManipulation::instantiation()->change_mail(userID,Mail);
+            sqlManipulation::instantiation()->change_password(userID,NewPassword);
+        }
 
         replyStream << "UPDATE_USERINFO_SUCCESS";
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
@@ -486,6 +498,17 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QByteArray content;
         messageStream>>senderID>>receiverID>>filename>>file_size>>content;
         qDebug() <<"Client(QtId=" << senderID << ") send "<<filename<<" to "<<"Client(QtId=" << receiverID << ")";
+        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString receiverID, QByteArray message){
+            emit signalSendMessage(receiverID,message);
+        }, receiverID, message);
+
+    }else if(header.startsWith("SEND_IMAGE")){  //发送图片
+
+        //报文:发送者ID、接收者ID、图片名、图片内容
+        QString senderID,receiverID,imagename;
+        QByteArray content;
+        messageStream>>senderID>>receiverID>>imagename>>content;
+        qDebug() <<"Client(QtId=" << senderID << ") send "<<imagename<<" to "<<"Client(QtId=" << receiverID << ")";
         QtConcurrent::run(QThreadPool::globalInstance(), [this](QString receiverID, QByteArray message){
             emit signalSendMessage(receiverID,message);
         }, receiverID, message);

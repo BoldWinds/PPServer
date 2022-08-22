@@ -37,8 +37,20 @@ public:
     QList<QString> get_groupMember(QString groupID);
     //将userID加入到groupID群组中
     bool add_group(QString userID,QString groupID);
+    //查询密码是否正确
+    bool check_password(QString userID,QString password);
+    //查询密保邮箱是否正确
+    bool check_mail(QString userID,QString mail);
+    //修改用户密码
+    bool change_password(QString userID,QString newPassword);
+    //修改用户邮箱
+    bool change_mail(QString userID,QString newMail);
+    //修改用户昵称
+    bool change_nickname(QString userID,QString newNickname);
     //通过userID获取对应nickname
     QString get_nickname(QString userID);
+    //通过userID获取对应mail
+    QString get_mail(QString userID);
     //通过groupID获取对应groupName
     QString get_groupName(QString groupID);
     //通过groupID获取对应creatorID
