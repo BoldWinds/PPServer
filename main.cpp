@@ -10,7 +10,6 @@ int main(int argc, char *argv[])
     w.show();
 
 
-    ServerSingleton::getInstance()->openServer();
     sqlManipulation::instantiation();
 
     return a.exec();

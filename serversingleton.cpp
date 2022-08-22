@@ -96,7 +96,14 @@ void ServerSingleton::closeSocket(qintptr descriptor){
 }
 
 void ServerSingleton::closeSocket(QString userID){
-    closeSocket(descriptorHash[userID]);
+    if(descriptorHash.find(userID) == descriptorHash.end()){
+        qDebug() << "Client(userID=" << userID << ") is offline, need not to close.";
+    }else{
+        qDebug() << "Closing socket of client(userID=" << userID << ")...";
+        closeSocket(descriptorHash[userID]);
+        emit signalOffline(userID);
+        qDebug() << "Socket of client(userID=" << userID << ") closed.";
+    }
 }
 
 QString ServerSingleton::getNickname(QString userID){
@@ -239,6 +246,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             //Hash操作
             onlineSet.insert(userID);
             descriptorHash[userID] = descriptor;
+
+            emit signalOnline(userID);
 
             //给socket记录userID
             ServerSocketThread *serverSocketThread = socketHash[descriptor];
