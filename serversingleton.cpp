@@ -257,6 +257,31 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(descriptor,reply);
             qDebug()<<"user: "<<userID<<" login fail";
         }
+    }else if(header.startsWith("RETRIEVE")){
+        QString userID,mail,password;
+        messageStream>> userID >> mail >> password;
+
+        //数据库处理
+        if(1){
+            replyStream << "RETRIEVE_SUCCESS";
+        }else{
+            replyStream << "RETRIEVE_FAIL";
+        }
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit ServerSingleton::signalSendMessage(descriptor,reply);
+        },descriptor,reply);
+    }else if(header.startsWith("GET_USER_INFO")){
+        QString userID;
+        messageStream >> userID;
+
+        QString NickName,Mail;
+        //数据库操作
+
+        replyStream << "GET_USER_INFO_SUCCESS" << NickName << Mail;
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit ServerSingleton::signalSendMessage(descriptor,reply);
+        },descriptor,reply);
+
     }else if(header.startsWith("GET_FRIENDS")){
         QString userID;
         messageStream >> userID;
@@ -287,7 +312,18 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }else if(header.startsWith("ADD_FRIEND")){
+    }else if(header.startsWith("UPDATE_USERINFO")){
+        QString NickName,Mail,NewPassword,OriginalPassword;
+        messageStream >> NickName,Mail,NewPassword,OriginalPassword;
+
+        //数据库操作
+
+        replyStream << "UPDATE_USERINFO_SUCCESS";
+        QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
+            emit ServerSingleton::signalSendMessage(descriptor,reply);
+        },descriptor,reply);
+    }
+    else if(header.startsWith("ADD_FRIEND")){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
