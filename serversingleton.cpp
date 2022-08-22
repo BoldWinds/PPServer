@@ -236,6 +236,14 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
             qDebug()<<"user: "<<userID<<" login";
 
+            //Hash操作
+            onlineSet.insert(userID);
+            descriptorHash[userID] = descriptor;
+
+            //给socket记录userID
+            ServerSocketThread *serverSocketThread = socketHash[descriptor];
+            serverSocketThread->recordUserID(userID);
+
             //离线消息发送
             if(offlinemessageHash.find(userID) == offlinemessageHash.end()){
                 //没有离线消息
@@ -253,14 +261,6 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
                 }
             }
 
-            //Hash操作
-            onlineSet.insert(userID);
-            descriptorHash[userID] = descriptor;
-
-            //给socket记录userID
-            ServerSocketThread *serverSocketThread = socketHash[descriptor];
-            serverSocketThread->recordUserID(userID);
-
         }else{
             QString header = "LOGIN_FAIL";
             replyStream<<header;
@@ -269,7 +269,8 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         }
     }else if(header.startsWith("RETRIEVE")){
         QString userID,mail,password;
-        messageStream>> userID >> mail >> password;
+        messageStream >> userID >> mail >> password;
+        qDebug()<<"user: "<<userID << "try to retrieve";
         bool result;
         //检查邮箱是否正确
         bool mail_result=sqlManipulation::instantiation()->check_mail(userID,mail);
