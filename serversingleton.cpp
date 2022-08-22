@@ -64,7 +64,7 @@ void ServerSingleton::openServer(QString ip,QString port){
 
 void ServerSingleton::openServer(){
     //默认在本地9000端口开启
-    openServer("152.136.145.133","9000");
+    openServer("127.0.0.1","9000");
 }
 
 void ServerSingleton::closeServer(){
