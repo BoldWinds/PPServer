@@ -42,11 +42,12 @@ ServerSingleton* ServerSingleton::getInstance(){
 void ServerSingleton::openServer(QString ip,QString port){
     if(this->isListening()){
         qDebug()<<"server has already been listening";
-    }else{
-        this->listen(QHostAddress::Any, port.toUInt());
+    }else if(this->listen(QHostAddress::Any, port.toUInt())){
         qDebug() << "Server listening...";
         qDebug() << "Server ip is" << ip;
         qDebug() << "Server port is " + port;
+    }else{
+        qWarning() << "server can not open!";
     }
 }
 
