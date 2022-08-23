@@ -9,7 +9,6 @@ ServerSingleton* ServerSingleton::instance = nullptr;
 
 ServerSingleton::ServerSingleton(QObject *parent) : QTcpServer(parent)
 {
-    getNetworkInfo();
 
     //发送消息的connet函数
     connect(this, SIGNAL(signalSendMessage(QString, const QByteArray)),
@@ -25,15 +24,13 @@ ServerSingleton::ServerSingleton(QObject *parent) : QTcpServer(parent)
 
     connect(this, SIGNAL(signalSendMessage(qintptr, const QByteArray)),
             this, SLOT(slotSendMessage(qintptr, const QByteArray)));
-    //    TcpServerSingleton::qtid_distributed = INIT_QTID + ServerSqlSingleton::account_number;
-   // heart_timer = startTimer(10000);
 }
 
 
 ServerSingleton* ServerSingleton::getInstance(){
     if(ServerSingleton::instance == nullptr){
         QMutex mutex;
-        //使用锁防止确保只有一个单例
+        //使用锁确保只有一个单例
         mutex.lock();
         ServerSingleton::instance = new ServerSingleton();
         mutex.unlock();
@@ -41,24 +38,15 @@ ServerSingleton* ServerSingleton::getInstance(){
     return ServerSingleton::instance;
 }
 
-//设置信息
-void ServerSingleton::getNetworkInfo(){
-    QHostInfo::lookupHost(hostinfo.localHostName(), this, SLOT(slotGetAddress(QHostInfo)));
-    hostaddr.setAddress(serverIP);
-    qDebug() << hostaddr;
-}
 
 void ServerSingleton::openServer(QString ip,QString port){
     if(this->isListening()){
         qDebug()<<"server has already been listening";
-        //emit sig_update_gui("Server is already listening!");
-    }else if(this->listen(QHostAddress::AnyIPv4, port.toUInt())){
+    }else{
+        this->listen(QHostAddress::Any, port.toUInt());
         qDebug() << "Server listening...";
         qDebug() << "Server ip is" << ip;
         qDebug() << "Server port is " + port;
-        //emit sig_update_gui("Server starts listening.");
-        //emit sig_update_gui("Server ip  : " + ip);
-        //emit sig_update_gui("Server port: " + port);
     }
 }
 
@@ -147,9 +135,6 @@ void ServerSingleton::slotSendMessage(qintptr descriptor, const QByteArray messa
        serverSocketThread->write(message);
 }
 
-void ServerSingleton::slotGetAddress(QHostInfo hostInfo){
-    emit signalGetIPList(hostInfo);
-}
 
 void ServerSingleton::slotUserOnline(QString userID){
     //先检测有没有离线消息

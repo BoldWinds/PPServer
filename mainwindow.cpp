@@ -21,13 +21,13 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::open_server(){
-    ServerSingleton* instance=ServerSingleton::getInstance();
-    instance->openServer();
+    qDebug()<<"open server";
+    ServerSingleton::getInstance()->openServer();
 }
 
 void MainWindow::close_server(){
-    ServerSingleton* instance=ServerSingleton::getInstance();
-    instance->closeServer();
+    ServerSingleton::getInstance()->closeServer();
+
 }
 
 void MainWindow::online_increase(QString userID){

@@ -22,13 +22,13 @@ ServerSocket::ServerSocket(QObject *parent) : QTcpSocket(parent){
             return;
         }
 
-        qDebug()<<userID<<" has disconnected!";
+        qDebug()<<"socket "<<descriptor<<" has disconnected!";
 
         if(QString::localeAwareCompare(userID, QString("")) == 0){
             qDebug()<<"HAVE NOT SIGNED UP";
             emit signalDisconnectedDescriptor(descriptor);
         }else{
-            qDebug()<<"socket";
+            qDebug()<<"user: "<<userID<<"disconnected";
             emit signalDisconnectedUserID(userID);
         }
     });
