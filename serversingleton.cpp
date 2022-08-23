@@ -74,8 +74,13 @@ void ServerSingleton::closeSocket(qintptr descriptor){
     }else{
         ServerSocketThread* serverSocketThread = socketHash[descriptor];
 
+        //停止循环
         serverSocketThread->close();
+        //退出
         serverSocketThread->quit();
+        //确保退出
+        serverSocketThread->wait();
+        //释放资源
         serverSocketThread->deleteLater();
 
         qDebug()<<"socket: "<<descriptor<<" closed";
