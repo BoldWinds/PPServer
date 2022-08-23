@@ -52,7 +52,7 @@ void ServerSingleton::openServer(QString ip,QString port){
     if(this->isListening()){
         qDebug()<<"server has already been listening";
         //emit sig_update_gui("Server is already listening!");
-    }else if(this->listen(QHostAddress(ip), port.toUInt())){
+    }else if(this->listen(QHostAddress::AnyIPv4, port.toUInt())){
         qDebug() << "Server listening...";
         qDebug() << "Server ip is" << ip;
         qDebug() << "Server port is " + port;
