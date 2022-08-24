@@ -485,48 +485,46 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
     }else if(header.startsWith("INVITE_GROUP")){  //群聊创建者邀请加群
 
-        //报文：被邀请者userID、邀请者nickname、群聊ID
+        //报文：邀请者ID、邀请者nickname、被邀请者userID、groupName、groupID
         //只有群聊创建者能邀请别人加群，执行结果会发给创建者
-        QString userID,inviter_nickname,groupID;
-        messageStream>>userID>>inviter_nickname>>groupID;
-        qDebug() <<"User (" << inviter_nickname << ") invite " << "Client(QtId=" << userID << ") to join group "<< groupID;
-        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString userID, QByteArray message){
-            emit signalSendMessage(userID, message);
-        }, userID, message);
+        QString inviterID,inviterName,receiverID,groupID,groupName;
+        messageStream>>inviterID>>inviterName>>receiverID>>groupName>>groupID;
+        qDebug() <<"User (" << inviterName << ") invite " << "Client(QtId=" << receiverID << ") to join group "<< groupName;
+        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString receiverID, QByteArray message){
+            emit signalSendMessage(receiverID, message);
+        }, receiverID, message);
 
     }else if(header.startsWith("INVITE_GROUP_SUCCESS")){  //被邀请者同意加群
 
-        //报文：被邀请者的userID、群聊ID、群聊名称
-        QString userID,groupID,groupName;
-        messageStream>>userID>>groupID>>groupName;
-        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString userID, QString groupID, QByteArray message){
+        //报文：邀请者的userID、被邀请者的userID、groupName、groupID
+        QString inviterID,receiverID,groupName,groupID;
+        messageStream>>inviterID>>receiverID>>groupName>>groupID;
+        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString inviterID, QString receiverID, QString groupName,QString groupID,QByteArray message){
             QByteArray feedback;
             QDataStream stream(&feedback,QIODevice::WriteOnly);
-            QString creatorID=sqlManipulation::instantiation()->get_creatorID(groupID);
-            bool result=sqlManipulation::instantiation()->add_group(userID,groupID);
+            bool result=sqlManipulation::instantiation()->add_group(receiverID,groupID);
             if(result){  //成功插入Groups表
-                emit signalSendMessage(creatorID,message);
-                qDebug() <<"Client(QtId=" << userID << ") successfully join group "<< groupID;
+                emit signalSendMessage(inviterID,message);
+                qDebug() <<"Client(QtId=" << receiverID << ") successfully join group "<< groupName;
             }
             else{  //插入Groups表失败
                 QString fail="INVITE_GROUP_FAIL";
-                stream<<fail<<userID<<groupID;
-                emit signalSendMessage(creatorID,feedback);
-                qDebug() <<"Client(QtId=" << userID << ") fail to join group "<< groupID;
+                stream<<fail<<inviterID<<receiverID<<groupName;
+                emit signalSendMessage(inviterID,feedback);
+                qDebug() <<"Client(QtId=" << receiverID << ") fail to join group "<< groupName;
             }
-        }, userID, groupID, message);
+        }, inviterID, receiverID, groupName, groupID, message);
 
 
     }else if(header.startsWith("INVITE_GROUP_FAIL")){  //被邀请者拒绝加群
 
-        //报文：被邀请者的userID、群聊ID
-        QString userID,groupID;
-        messageStream>>userID>>groupID;
-        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString userID, QString groupID, QByteArray message){
-            QString creatorID=sqlManipulation::instantiation()->get_creatorID(groupID);
-            emit signalSendMessage(creatorID,message);
-            qDebug() <<"Client(QtId=" << userID << ") fail to join group "<< groupID;
-        }, userID, groupID, message);
+        //报文：邀请者的userID、被邀请者的userID、groupName
+        QString inviterID,receiverID,groupName;
+        messageStream>>inviterID>>receiverID>>groupName;
+        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString inviterID, QString receiverID, QString groupName, QByteArray message){
+            emit signalSendMessage(inviterID,message);
+            qDebug() <<"Client(QtId=" << receiverID << ") fail to join group "<< groupName;
+        }, inviterID, receiverID, groupName, message);
 
     }else if(header.startsWith("SEND_FILE")){  //发送文件
 
