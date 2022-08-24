@@ -376,6 +376,21 @@ QString sqlManipulation::get_profile(QString userID){
     return profile;
 }
 
+//通过userID获取对应password
+QString sqlManipulation::get_password(QString userID){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString password;
+    QString userID_password=QString("SELECT password FROM User WHERE userID='%1'").arg(userID);
+    if(query->prepare(userID_password) && query->exec()){
+        query->next();
+        password=query->value(0).toString();
+        qDebug()<<"Successfully get password";
+    }
+    else qDebug()<<"Fail to get password";
+    delete query;
+    return password;
+}
+
 //通过groupID获取对应groupName
 QString sqlManipulation::get_groupName(QString groupID){
     QSqlQuery* query=new QSqlQuery(myDatabase);

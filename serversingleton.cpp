@@ -325,7 +325,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         for(auto friendID : friendIDs){
             friendnames.append(sql->get_nickname(friendID));
-            QString profile_path=sql->instantiation()->get_profile(userID);
+            QString profile_path=sql->instantiation()->get_profile(friendID);
             profiles.append(img_bytes(profile_path));
         }
         for(auto groupID : groupnames){
@@ -340,20 +340,25 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         },descriptor,reply);
 
     }else if(header.startsWith("UPDATE_USERINFO")){
-        QByteArray profile;
+        QByteArray Profile;  //头像非空
         QString NickName,Mail,NewPassword,OriginalPassword;
-        messageStream >> NickName>>Mail>>NewPassword>>OriginalPassword>>profile;
+        messageStream>>NickName>>Mail>>NewPassword>>OriginalPassword>>Profile;
         QString userID=descriptorHash.key(descriptor);
         bool result=sqlManipulation::instantiation()->check_password(userID,OriginalPassword);
         if(result){
-            sqlManipulation::instantiation()->change_nickname(userID,NickName);
-            sqlManipulation::instantiation()->change_mail(userID,Mail);
-            sqlManipulation::instantiation()->change_password(userID,NewPassword);
-            bytes_img(profile,userID);  //保存图片，无需修改数据库中路径
+            if(!NickName.isEmpty()) sqlManipulation::instantiation()->change_nickname(userID,NickName);
+            if(!Mail.isEmpty()) sqlManipulation::instantiation()->change_mail(userID,Mail);
+            if(!NewPassword.isEmpty()) sqlManipulation::instantiation()->change_password(userID,NewPassword);
+            bytes_img(Profile,userID);  //保存图片，无需修改数据库中路径
         }
 
         QString header = "UPDATE_USERINFO_SUCCESS";
-        replyStream << header;
+        QString nickname=sqlManipulation::instantiation()->get_nickname(userID);
+        QString mail=sqlManipulation::instantiation()->get_mail(userID);
+        QString password=sqlManipulation::instantiation()->get_password(userID);
+        QString profile_path=sqlManipulation::instantiation()->get_profile(userID);
+        QByteArray profile=img_bytes(profile_path);
+        replyStream<<header<<nickname<<mail<<password<<profile;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);

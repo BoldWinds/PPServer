@@ -55,6 +55,8 @@ public:
     QString get_mail(QString userID);
     //通过userID获取对应profile
     QString get_profile(QString userID);
+    //通过userID获取对应password
+    QString get_password(QString userID);
     //通过groupID获取对应groupName
     QString get_groupName(QString groupID);
     //通过groupID获取对应creatorID
