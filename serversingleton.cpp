@@ -134,7 +134,7 @@ void ServerSingleton::slotSendMessage(QString userID, const QByteArray message){
 }
 
 void ServerSingleton::slotSendMessage(qintptr descriptor, const QByteArray message){
-       qDebug() << "Sending message: " << message;
+       qDebug() << "Sending message";
 
        ServerSocketThread* serverSocketThread = socketHash[descriptor];
        serverSocketThread->write(message);
