@@ -18,7 +18,7 @@ sqlManipulation::sqlManipulation(QObject *parent) : QObject(parent)
             //不存在User表，则进行创建
             account_num=0;
             QString create_user_table="CREATE TABLE User(userID char(8) PRIMARY KEY,"
-                                      "nickname varchar(20),password varchar(20),mail varchar(30),groups varchar(60000))";
+                                      "nickname varchar(20),password varchar(20),mail varchar(30),profile varchar(40),groups varchar(60000))";
             if(query->prepare(create_user_table) && query->exec()){
                 qDebug()<<"Successfully create TABLE User";
             }
@@ -318,6 +318,19 @@ bool sqlManipulation::change_nickname(QString userID,QString newNickname){
     return result;
 }
 
+//修改用户头像
+bool sqlManipulation::change_profile(QString userID,QString newProfile){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString update_profile=QString("UPDATE User SET profile='%1' WHERE userID='%2'").arg(newProfile).arg(userID);
+    bool result=query->prepare(update_profile) && query->exec();
+    if(result){
+        qDebug()<<"Successfully change profile";
+    }
+    else qDebug()<<"Fail to change profile";
+    delete query;
+    return result;
+}
+
 //通过userID获取对应nickname
 QString sqlManipulation::get_nickname(QString userID){
     QSqlQuery* query=new QSqlQuery(myDatabase);
@@ -346,6 +359,21 @@ QString sqlManipulation::get_mail(QString userID){
     else qDebug()<<"Fail to get mail";
     delete query;
     return mail;
+}
+
+//通过userID获取对应profile
+QString sqlManipulation::get_profile(QString userID){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString profile;
+    QString userID_profile=QString("SELECT profile FROM User WHERE userID='%1'").arg(userID);
+    if(query->prepare(userID_profile) && query->exec()){
+        query->next();
+        profile=query->value(0).toString();
+        qDebug()<<"Successfully get profile";
+    }
+    else qDebug()<<"Fail to get profile";
+    delete query;
+    return profile;
 }
 
 //通过groupID获取对应groupName

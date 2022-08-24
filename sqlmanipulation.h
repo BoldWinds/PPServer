@@ -47,10 +47,14 @@ public:
     bool change_mail(QString userID,QString newMail);
     //修改用户昵称
     bool change_nickname(QString userID,QString newNickname);
+    //修改用户头像
+    bool change_profile(QString userID,QString newProfile);
     //通过userID获取对应nickname
     QString get_nickname(QString userID);
     //通过userID获取对应mail
     QString get_mail(QString userID);
+    //通过userID获取对应profile
+    QString get_profile(QString userID);
     //通过groupID获取对应groupName
     QString get_groupName(QString groupID);
     //通过groupID获取对应creatorID

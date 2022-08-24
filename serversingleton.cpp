@@ -17,7 +17,6 @@ ServerSingleton::ServerSingleton(QObject *parent) : QTcpServer(parent)
     connect(this,SIGNAL(signalOnline(QString)),
                         this,SLOT(slotUserOnline(QString)));
 
-    //这段代码？？
     if(!QMetaType::isRegistered((QMetaType::type("qintptr")))){
         qRegisterMetaType<qintptr>("qintptr");
     }
@@ -205,10 +204,14 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     qDebug() << "Header : " << header;
 
     if(header.startsWith("REGISTER")){
+        QByteArray profile;
         QString nickname,password,mail;
-        messageStream >> nickname >> password >> mail;
+        messageStream >> nickname >> password >> mail >> profile;
 
         QString userID = sqlManipulation::instantiation()->register_account(nickname,password,mail);
+
+        QString profile_path=bytes_img(profile,userID);
+        sqlManipulation::instantiation()->change_profile(userID,profile_path);
 
         qDebug()<<"user: "<<nickname <<"'s userID is: "<<userID;
 
@@ -319,30 +322,35 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
 
         QList<QString> friendnames = QList<QString>();
         QList<QString> groupnames = QList<QString>();
+        QList<QByteArray> profiles = QList<QByteArray>();
 
         for(auto friendID : friendIDs){
             friendnames.append(sql->get_nickname(friendID));
+            QString profile_path=sql->instantiation()->get_profile(userID);
+            profiles.append(img_bytes(profile_path));
         }
         for(auto groupID : groupnames){
             groupnames.append(sql->get_groupName(groupID));
         }
 
         QString header = "GET_FRIENDS_SUCCESS";
-        replyStream<<header<<friendsCount<<friendIDs<<friendnames
-                  <<groupsCount<<groupIDs<<groupnames;
+        replyStream<<header<<friendsCount<<friendnames<<friendIDs<<profiles
+                  <<groupsCount<<groupnames<<groupIDs;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
     }else if(header.startsWith("UPDATE_USERINFO")){
+        QByteArray profile;
         QString NickName,Mail,NewPassword,OriginalPassword;
-        messageStream >> NickName>>Mail>>NewPassword>>OriginalPassword;
+        messageStream >> NickName>>Mail>>NewPassword>>OriginalPassword>>profile;
         QString userID=descriptorHash.key(descriptor);
         bool result=sqlManipulation::instantiation()->check_password(userID,OriginalPassword);
         if(result){
             sqlManipulation::instantiation()->change_nickname(userID,NickName);
             sqlManipulation::instantiation()->change_mail(userID,Mail);
             sqlManipulation::instantiation()->change_password(userID,NewPassword);
+            bytes_img(profile,userID);  //保存图片，无需修改数据库中路径
         }
 
         QString header = "UPDATE_USERINFO_SUCCESS";
@@ -356,7 +364,10 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
         QString header = "ADD_FRIEND";
-        replyStream<<header<< sendUserID<<sendUsername<<receiverUserID;
+        QByteArray profile;
+        QString profile_path=sqlManipulation::instantiation()->get_profile(sendUserID);
+        profile=img_bytes(profile_path);
+        replyStream<<header<< sendUserID<<sendUsername<<receiverUserID<<profile;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
             emit signalSendMessage(receiverUserID,reply);
         },receiverUserID,reply);
@@ -534,5 +545,40 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         }, receiverID, message);
 
     }
+}
+
+//将QByteArray类型图片转为png格式存在服务器，返回图片路径
+QString ServerSingleton::bytes_img(QByteArray img,QString userID){
+    QPixmap pixmap;
+    QString path_default=QDir::currentPath();
+    QString path=path_default+userID+".png";
+    if(pixmap.loadFromData(img)){
+        if(pixmap.save(path)){
+            qDebug()<<"bytes to img success";
+        }
+        else{
+            qDebug()<<"bytes to img fail";
+        }
+    }
+    return path;
+}
+
+//将png类型图片转为QByteArray
+QByteArray ServerSingleton::img_bytes(QString path){
+    QByteArray pixArray;
+    QPixmap pixmap;
+    if(pixmap.load(path)){
+        QBuffer buffer;
+        if(buffer.open(QIODevice::WriteOnly)){
+            pixmap.save(&buffer,"png");
+            pixArray.append(buffer.data());
+            buffer.close();
+            qDebug()<<"img to bytes success";
+        }
+        else{
+            qDebug()<<"img to bytes fail";
+        }
+    }
+    return pixArray;
 }
 
