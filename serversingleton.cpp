@@ -370,11 +370,19 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
-        QString header = "ADD_FRIEND";
-        QImage profile;
-        QString profile_path=sqlManipulation::instantiation()->get_profile(sendUserID);
-        profile=img_bytes(profile_path);
-        replyStream<<header<< sendUserID<<sendUsername<<receiverUserID<<profile;
+        QList<QString> friends = sqlManipulation::instantiation()->get_friendlist(sendUserID);
+        if(friends.contains(receiverUserID)){
+            //俩人早就是好友了
+            QString header = "ADD_FRIEND_CONFLICT";
+            replyStream << header;
+        }else{
+            QString header = "ADD_FRIEND";
+            QImage profile;
+            QString profile_path=sqlManipulation::instantiation()->get_profile(sendUserID);
+            profile=img_bytes(profile_path);
+            replyStream<<header<< sendUserID<<sendUsername<<receiverUserID<<profile;
+        }
+
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
             emit signalSendMessage(receiverUserID,reply);
         },receiverUserID,reply);
@@ -447,10 +455,21 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString userID,nickname,groupID;
         messageStream>>userID>>nickname>>groupID;
         qDebug() <<"Client(QtId=" << userID << ") apply for joining group "<< groupID;
-        QString creatorID=sqlManipulation::instantiation()->get_creatorID(groupID);
-        QtConcurrent::run(QThreadPool::globalInstance(), [this](QString creatorID, QByteArray message){
-            emit signalSendMessage(creatorID, message);
-        }, creatorID, message);
+
+        QList<QString> groups = sqlManipulation::instantiation()->get_grouplist(userID);
+        if(groups.contains(groupID)){
+            //已经加群
+            QString header = "ADD_GROUP_CONFLICT";
+            replyStream << header;
+            QtConcurrent::run(QThreadPool::globalInstance(), [this](qintptr des, QByteArray reply){
+                emit signalSendMessage(des,reply);
+            }, descriptor, reply);
+        }else{
+            QString creatorID=sqlManipulation::instantiation()->get_creatorID(groupID);
+            QtConcurrent::run(QThreadPool::globalInstance(), [this](QString creatorID, QByteArray message){
+                emit signalSendMessage(creatorID, message);
+            }, creatorID, message);
+        }
 
     }else if(header.startsWith("ADD_GROUP_SUCCESS")){  //群聊创建者同意加群请求
 
