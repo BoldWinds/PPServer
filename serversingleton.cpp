@@ -365,35 +365,38 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
-    }
-    else if(header.startsWith("ADD_FRIEND")){
+    }else if(header.startsWith("ADD_FRIEND")){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
-        QList<QString> friends = sqlManipulation::instantiation()->get_friendlist(sendUserID);
-        if(friends.contains(receiverUserID)){
-            //俩人早就是好友了
-            QString header = "ADD_FRIEND_CONFLICT";
-            replyStream << header;
-        }else{
+        bool result=sqlManipulation::instantiation()->check_friend(sendUserID,receiverUserID);
+        if(result){
+            QString header="ADD_FRIEND_CONFLICT";
+            replyStream<<header;
+            QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
+                emit signalSendMessage(sendUserID,reply);
+            },sendUserID,reply);
+        }
+        else{
             QString header = "ADD_FRIEND";
             QImage profile;
             QString profile_path=sqlManipulation::instantiation()->get_profile(sendUserID);
             profile=img_bytes(profile_path);
             replyStream<<header<< sendUserID<<sendUsername<<receiverUserID<<profile;
+            QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
+                emit signalSendMessage(receiverUserID,reply);
+            },receiverUserID,reply);
         }
 
-        QtConcurrent::run(QThreadPool::globalInstance(),[this](QString receiverUserID,QByteArray reply){
-            emit signalSendMessage(receiverUserID,reply);
-        },receiverUserID,reply);
-
     }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
+        QImage receiverProfile;
         QString sendUserID,receiveUserID,receiveUsername;
-        messageStream >> sendUserID >> receiveUserID >>receiveUsername;
+        messageStream >> sendUserID >>receiveUsername>> receiveUserID>>receiverProfile;
 
         sqlManipulation::instantiation()->add_friend(sendUserID,receiveUserID);
+        sqlManipulation::instantiation()->add_friend(receiveUserID,sendUserID);
         QString header = "ADD_FRIEND_SUCCESS";
-        replyStream<<header<< sendUserID<<receiveUserID<<receiveUsername;
+        replyStream<<header<< sendUserID<<receiveUsername<<receiveUserID<<receiverProfile;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
             emit signalSendMessage(sendUserID,reply);
         },sendUserID,reply);
