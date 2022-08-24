@@ -38,11 +38,11 @@ public:
     // 根据给定的userID，关闭对应连接的套接字
     void closeSocket(QString userID);
 
-    //将QByteArray类型图片转为png格式存在服务器，返回图片路径
-    QString bytes_img(QByteArray img,QString userID);
+    //将QImage类型图片转为png格式存在服务器，返回图片路径
+    QString bytes_img(QImage img,QString userID);
 
-    //将png类型图片转为QByteArray
-    QByteArray img_bytes(QString path);
+    //将png类型图片转为QImage
+    QImage img_bytes(QString path);
 
 protected:
      // 有新的连接进入服务器时调用，自动为其分配描述符
