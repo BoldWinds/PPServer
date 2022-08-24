@@ -279,6 +279,24 @@ bool sqlManipulation::check_mail(QString userID,QString mail){
     return result;
 }
 
+//查询两人是否为好友
+bool sqlManipulation::check_friend(QString userID1,QString userID2){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString check_friend=QString("SELECT * FROM Friend WHERE userID='%1' AND friend_userID='%2'").arg(userID1).arg(userID2);
+    bool result=false;
+    if(query->prepare(check_friend) && query->exec()){
+        if(query->next()){
+            result=true;
+            qDebug()<<"User("<<userID1<< ") and User("<<userID2<<") are already friends";
+        }
+    }
+    if(result==false){
+        qDebug()<<"User("<<userID1<< ") and User("<<userID2<<") are not friends";
+    }
+    delete query;
+    return result;
+}
+
 //修改用户密码
 bool sqlManipulation::change_password(QString userID,QString newPassword){
     QSqlQuery* query=new QSqlQuery(myDatabase);

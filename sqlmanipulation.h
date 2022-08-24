@@ -41,6 +41,8 @@ public:
     bool check_password(QString userID,QString password);
     //查询密保邮箱是否正确
     bool check_mail(QString userID,QString mail);
+    //查询两人是否为好友
+    bool check_friend(QString userID1,QString userID2);
     //修改用户密码
     bool change_password(QString userID,QString newPassword);
     //修改用户邮箱
