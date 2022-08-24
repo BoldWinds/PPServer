@@ -53,6 +53,7 @@ void ServerSocketThread::run(){
         qDebug()<<"connected";
     }
 
+    //循环以保持连接
     while(serverSocket->state() == QAbstractSocket::ConnectedState and checkpoint){
         QEventLoop loop;
         QTimer::singleShot(1000, &loop, SLOT(quit()));

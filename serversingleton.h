@@ -8,6 +8,7 @@
 #include <QMutex>
 #include <QBuffer>
 #include <QDir>
+#include <QPixmap>
 #include "serversocket.h"
 #include "sqlmanipulation.h"
 #include "serversocketthread.h"

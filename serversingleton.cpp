@@ -158,7 +158,6 @@ void ServerSingleton::slotUserOnline(QString userID){
     }
     onlineSet.insert(userID);
 
-
 }
 
 void ServerSingleton::incomingConnection(qintptr descriptor){
@@ -543,6 +542,13 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(), [this](QString receiverID, QByteArray message){
             emit signalSendMessage(receiverID,message);
         }, receiverID, message);
+
+    }else{  //针对所有不合法请求
+        QString header = "ILLEGAL_MESSAGE";
+        replyStream << header;
+        QtConcurrent::run(QThreadPool::globalInstance(), [this](qintptr descriptor, QByteArray reply){
+            emit signalSendMessage(descriptor,reply);
+        }, descriptor,reply);
 
     }
 }
