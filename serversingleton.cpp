@@ -109,7 +109,7 @@ QString ServerSingleton::getNickname(QString userID){
 }
 
 void ServerSingleton::slotSendMessage(QString userID, const QByteArray message){
-    qDebug() << "Sending message: " << message;
+    //qDebug() << "Sending message: " << message;
     if(onlineSet.find(userID) == onlineSet.constEnd()){
         //这哥们不在线
         qDebug()<<"receiver offline";
