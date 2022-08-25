@@ -171,7 +171,7 @@ QString sqlManipulation::create_group(QString userID,QString groupName){
     }
     else qDebug()<<"Fail to create group";
     delete query;
-    return userID;
+    return groupID;
 }
 
 //按照groupID获取同一群组所有成员

@@ -230,6 +230,39 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             QString header = "LOGIN_SUCCESS";
             replyStream<<header;
 
+            QString NickName,Mail;
+            QImage profile;
+            NickName=sqlManipulation::instantiation()->get_nickname(userID);
+            Mail=sqlManipulation::instantiation()->get_mail(userID);
+            QString profile_path=sqlManipulation::instantiation()->get_profile(userID);
+            profile=img_bytes(profile_path);
+
+            int friendsCount,groupsCount;
+
+            sqlManipulation* sql = sqlManipulation::instantiation();
+
+            QList<QString> friendIDs = sql->get_friendlist(userID);
+            QList<QString> groupIDs = sql->get_grouplist(userID);
+
+            friendsCount = friendIDs.size();
+            groupsCount = groupIDs.size();
+
+            QList<QString> friendnames = QList<QString>();
+            QList<QString> groupnames = QList<QString>();
+            QList<QImage> profiles = QList<QImage>();
+
+            for(auto friendID : friendIDs){
+                friendnames.append(sql->get_nickname(friendID));
+                QString profile_path=sql->instantiation()->get_profile(friendID);
+                profiles.append(img_bytes(profile_path));
+            }
+
+            for(auto groupID : groupIDs){
+                groupnames.append(sql->get_groupName(groupID));
+            }
+            replyStream << NickName << Mail << profile<<friendsCount<<friendnames<<friendIDs<<profiles
+                        <<groupsCount<<groupnames<<groupIDs;
+
             QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
                 emit signalSendMessage(descriptor,reply);
             },descriptor,reply);
@@ -291,7 +324,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
-    }else if(header=="GET_USER_INFO"){
+    }/*else if(header=="GET_USER_INFO"){
         QString userID;
         messageStream >> userID;
 
@@ -332,7 +365,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }/*else if(header.startsWith("GET_FRIENDS")){
+    }*//*else if(header.startsWith("GET_FRIENDS")){
         QString userID;
         messageStream >> userID;
 
