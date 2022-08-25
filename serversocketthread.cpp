@@ -16,6 +16,7 @@ void ServerSocketThread::write(QByteArray message){
     //若socket是连接状态则直接发送
     if(serverSocket->state() == QAbstractSocket::ConnectedState){
         serverSocket->write(message);
+        serverSocket->flush();
         qDebug()<<"SEND MESSAGE";
         return;
     }
