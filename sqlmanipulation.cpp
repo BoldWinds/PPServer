@@ -297,6 +297,24 @@ bool sqlManipulation::check_friend(QString userID1,QString userID2){
     return result;
 }
 
+//查询群组是否存在
+bool sqlManipulation::check_group(QString groupID){
+    QSqlQuery* query=new QSqlQuery(myDatabase);
+    QString check_group=QString("SELECT * FROM Groups WHERE groupID='%1'").arg(groupID);
+    bool result=false;
+    if(query->prepare(check_group) && query->exec()){
+        if(query->next()){
+            result=true;
+            qDebug()<<"group exists";
+        }
+    }
+    if(result==false){
+        qDebug()<<"group not exists";
+    }
+    delete query;
+    return result;
+}
+
 //修改用户密码
 bool sqlManipulation::change_password(QString userID,QString newPassword){
     QSqlQuery* query=new QSqlQuery(myDatabase);
