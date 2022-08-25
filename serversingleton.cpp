@@ -202,7 +202,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
     messageStream >> header;
     qDebug() << "Header : " << header;
 
-    if(header.startsWith("REGISTER")){
+    if(header=="REGISTER"){
         QImage profile;
         QString nickname,password,mail;
         messageStream >> nickname >> password >> mail >> profile;
@@ -221,7 +221,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }else if(header.startsWith("LOGIN")){
+    }else if(header=="LOGIN"){
         QString userID,password;
         messageStream>>userID>>password;
 
@@ -269,7 +269,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(descriptor,reply);
             qDebug()<<"user: "<<userID<<" login fail";
         }
-    }else if(header.startsWith("RETRIEVE")){
+    }else if(header=="RETRIEVE"){
         QString userID,mail,password;
         messageStream >> userID >> mail >> password;
         qDebug()<<"user: "<<userID << "try to retrieve";
@@ -291,7 +291,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
-    }else if(header.startsWith("GET_USER_INFO")){
+    }else if(header=="GET_USER_INFO"){
         QString userID;
         messageStream >> userID;
 
@@ -366,7 +366,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }*/else if(header.startsWith("UPDATE_USERINFO")){
+    }*/else if(header=="UPDATE_USERINFO"){
         QImage Profile;  //头像非空
         QString NickName,Mail,NewPassword,OriginalPassword;
         messageStream>>NickName>>Mail>>NewPassword>>OriginalPassword>>Profile;
@@ -389,7 +389,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
-    }else if(header.startsWith("ADD_FRIEND")){
+    }else if(header=="ADD_FRIEND"){
         QString sendUserID,sendUsername,receiverUserID;
         messageStream >> sendUserID>>sendUsername>>receiverUserID;
 
@@ -413,20 +413,22 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         }
 
 
-    }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
+    }else if(header=="ADD_FRIEND_SUCCESS"){
         QImage receiverProfile;
         QString sendUserID,receiveUserID,receiveUsername;
         messageStream >> sendUserID >>receiveUsername>> receiveUserID>>receiverProfile;
 
         sqlManipulation::instantiation()->add_friend(sendUserID,receiveUserID);
         sqlManipulation::instantiation()->add_friend(receiveUserID,sendUserID);
+
         QString header = "ADD_FRIEND_SUCCESS";
         replyStream<<header<< sendUserID<<receiveUsername<<receiveUserID<<receiverProfile;
+
         QtConcurrent::run(QThreadPool::globalInstance(),[this](QString sendUserID,QByteArray reply){
             emit signalSendMessage(sendUserID,reply);
         },sendUserID,reply);
 
-    }else if(header.startsWith("ADD_FRIEND_FAIL")){
+    }else if(header=="ADD_FRIEND_FAIL"){
         QString sendUserID,receiveUserID;
         messageStream >> sendUserID >> receiveUserID;
 
@@ -438,7 +440,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         },sendUserID,reply);
 
 
-    }else if(header.startsWith("CREATE_GROUP")){
+    }else if(header=="CREATE_GROUP"){
         QString userID,groupname,groupID;
         messageStream>> userID>>groupname;
 
@@ -451,7 +453,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         },descriptor,reply);
 
 
-    }else if(header.startsWith("PRIVATE_CHAT")){  //私聊
+    }else if(header=="PRIVATE_CHAT"){  //私聊
 
         //报文：发送者的userID、接收者的userID、时间、聊天内容
         QString sendUserID,receiveUserID,time,content;
@@ -462,7 +464,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(receiveUserID, message);
         }, receiveUserID, message);
 
-    }else if(header.startsWith("PUBLIC_CHAT")){  //群聊
+    }else if(header=="PUBLIC_CHAT"){  //群聊
 
         //报文：发送者的userID、群聊ID、时间、聊天内容
         QString userID,groupID,time,content;
@@ -476,7 +478,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             }, user_ID, message);
         }
 
-    }else if(header.startsWith("ADD_GROUP")){  //申请加群
+    }else if(header=="ADD_GROUP"){  //申请加群
 
         //报文：请求者的userID、请求者nickname、群聊ID
         //请求者向群聊创建者发送加群请求，执行结果会发给请求者
@@ -499,7 +501,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             }, creatorID, message);
         }
 
-    }else if(header.startsWith("ADD_GROUP_SUCCESS")){  //群聊创建者同意加群请求
+    }else if(header=="ADD_GROUP_SUCCESS"){  //群聊创建者同意加群请求
 
         //报文：请求者的userID、群聊ID、群聊名称
         QString userID,groupID,groupName;
@@ -520,7 +522,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             }
         }, userID, groupID, message);
 
-    }else if(header.startsWith("ADD_GROUP_FAIL")){  //群聊创建者拒绝加群请求
+    }else if(header=="ADD_GROUP_FAIL"){  //群聊创建者拒绝加群请求
 
         //报文：请求者的userID、群聊ID
         QString userID,groupID;
@@ -530,7 +532,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             qDebug() <<"Client(QtId=" << userID << ") fail to join group "<< groupID;
         }, userID, groupID, message);
 
-    }else if(header.startsWith("INVITE_GROUP")){  //群聊创建者邀请加群
+    }else if(header=="INVITE_GROUP"){  //群聊创建者邀请加群
 
         //报文：邀请者ID、邀请者nickname、被邀请者userID、groupName、groupID
         //只有群聊创建者能邀请别人加群，执行结果会发给创建者
@@ -541,7 +543,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(receiverID, message);
         }, receiverID, message);
 
-    }else if(header.startsWith("INVITE_GROUP_SUCCESS")){  //被邀请者同意加群
+    }else if(header=="INVITE_GROUP_SUCCESS"){  //被邀请者同意加群
 
         //报文：邀请者的userID、被邀请者的userID、groupName、groupID
         QString inviterID,receiverID,groupName,groupID;
@@ -563,7 +565,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         }, inviterID, receiverID, groupName, groupID, message);
 
 
-    }else if(header.startsWith("INVITE_GROUP_FAIL")){  //被邀请者拒绝加群
+    }else if(header=="INVITE_GROUP_FAIL"){  //被邀请者拒绝加群
 
         //报文：邀请者的userID、被邀请者的userID、groupName
         QString inviterID,receiverID,groupName;
@@ -573,7 +575,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             qDebug() <<"Client(QtId=" << receiverID << ") fail to join group "<< groupName;
         }, inviterID, receiverID, groupName, message);
 
-    }else if(header.startsWith("SEND_FILE")){  //发送文件
+    }else if(header=="SEND_FILE"){  //发送文件
 
         //报文:发送者ID、接收者ID、文件名、文件大小、文件内容
         QString senderID,receiverID,filename;
@@ -585,7 +587,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(receiverID,message);
         }, receiverID, message);
 
-    }else if(header.startsWith("SEND_IMAGE")){  //发送图片
+    }else if(header=="SEND_IMAGE"){  //发送图片
 
         //报文:发送者ID、接收者ID、图片名、图片内容
         QString senderID,receiverID,imagename;
@@ -602,7 +604,6 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QtConcurrent::run(QThreadPool::globalInstance(), [this](qintptr descriptor, QByteArray reply){
             emit signalSendMessage(descriptor,reply);
         }, descriptor,reply);
-
     }
 }
 
