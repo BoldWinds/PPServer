@@ -302,13 +302,37 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
         QString profile_path=sqlManipulation::instantiation()->get_profile(userID);
         profile=img_bytes(profile_path);
 
+        int friendsCount,groupsCount;
+
+        sqlManipulation* sql = sqlManipulation::instantiation();
+
+        QList<QString> friendIDs = sql->get_friendlist(userID);
+        QList<QString> groupIDs = sql->get_grouplist(userID);
+
+        friendsCount = friendIDs.size();
+        groupsCount = groupIDs.count();
+
+        QList<QString> friendnames = QList<QString>();
+        QList<QString> groupnames = QList<QString>();
+        QList<QImage> profiles = QList<QImage>();
+
+        for(auto friendID : friendIDs){
+            friendnames.append(sql->get_nickname(friendID));
+            QString profile_path=sql->instantiation()->get_profile(friendID);
+            profiles.append(img_bytes(profile_path));
+        }
+        for(auto groupID : groupnames){
+            groupnames.append(sql->get_groupName(groupID));
+        }
+
         QString header = "GET_USER_INFO_SUCCESS";
-        replyStream << header << NickName << Mail << profile;
+        replyStream << header << NickName << Mail << profile<<friendsCount<<friendnames<<friendIDs<<profiles
+                    <<groupsCount<<groupnames<<groupIDs;
         QtConcurrent::run(QThreadPool::globalInstance(),[this](qintptr descriptor,QByteArray reply){
             emit ServerSingleton::signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }else if(header.startsWith("GET_FRIENDS")){
+    }/*else if(header.startsWith("GET_FRIENDS")){
         QString userID;
         messageStream >> userID;
 
@@ -342,7 +366,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
             emit signalSendMessage(descriptor,reply);
         },descriptor,reply);
 
-    }else if(header.startsWith("UPDATE_USERINFO")){
+    }*/else if(header.startsWith("UPDATE_USERINFO")){
         QImage Profile;  //头像非空
         QString NickName,Mail,NewPassword,OriginalPassword;
         messageStream>>NickName>>Mail>>NewPassword>>OriginalPassword>>Profile;
@@ -387,6 +411,7 @@ void ServerSingleton::slotReadMessage(qintptr descriptor, QByteArray message){
                 emit signalSendMessage(receiverUserID,reply);
             },receiverUserID,reply);
         }
+
 
     }else if(header.startsWith("ADD_FRIEND_SUCCESS")){
         QImage receiverProfile;
